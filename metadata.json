@@ -1,0 +1,5 @@
+{
+  "name": "ORCID & OpenAlex Research Tracker",
+  "description": "A research activity tracker for university faculty using ORCID Public API and Gemini AI for analysis and reporting.",
+  "requestFramePermissions": []
+}
