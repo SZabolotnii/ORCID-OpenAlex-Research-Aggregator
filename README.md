@@ -114,7 +114,7 @@ The vision: *Automated multi-source integration with intelligent report generati
 | **Cost Savings** | — | $12,000+/year | Per mid-size dept |
 | **Data Sources** | 1-2 (manual) | 4 (automated) | **4x coverage** |
 
-**Production Deployment:** Cherkasy State Business College, Ukraine (December 2024)  
+**MVP Deployment:** Cherkasy State Business College, Ukraine (December 2025)  
 **Validated Dataset:** 347 publications, 23 faculty members
 
 ---
