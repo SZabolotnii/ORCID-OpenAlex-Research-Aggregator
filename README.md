@@ -305,8 +305,6 @@ Contributions welcome! Please follow these steps:
 - **Built for:** [Vibe Coding with Gemini 3 Pro Hackathon](https://www.kaggle.com/competitions/gemini-3-pro-hackathon)
 - **Development Time:** 5 hours (Google AI Studio Vibe Coding)
 - **Impact:** 93% time reduction, $12K+ annual savings
-- **Deployment:** Production use at Cherkasy State Business College
-
 ---
 
 ## 📄 License
