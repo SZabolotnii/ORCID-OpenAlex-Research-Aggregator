@@ -40,6 +40,17 @@ export const translations = {
     allFaculty: "All Faculty",
     scopusPubs: "Indexed in Scopus",
     wosPubs: "Indexed in WoS",
+    pubsPerFaculty: "Pubs/Faculty/Year",
+    oaRatio: "Open Access %",
+    deptComparison: "Department Comparison",
+    deptCompMetric: "Metric",
+    deptName: "Department",
+    radarComparison: "Department Radar Comparison",
+    selectDeptA: "Department A",
+    selectDeptB: "Department B",
+    oaDistribution: "Open Access Distribution",
+    oaOpen: "Open Access",
+    oaClosed: "Closed",
     
     // Faculty List
     name: "Name",
@@ -84,6 +95,8 @@ export const translations = {
       "Compare department output"
     ],
     errorMsg: "Sorry, I encountered an error while processing your request.",
+    clearChat: "Clear Chat",
+    exportChat: "Export Chat",
 
     // Reports
     smartReport: "Smart Report Generator",
@@ -109,6 +122,10 @@ export const translations = {
     rawView: "Raw Markdown",
     supportsFiles: "Supports .docx, .xlsx, .pdf, .csv, .txt, .md",
     outputFormat: "Format",
+    reportHistory: "History",
+    noSavedReports: "No saved reports yet",
+    loadReport: "Load",
+    deleteReport: "Delete",
     
     // Search
     searchPageTitle: "Search by Institution",
@@ -155,7 +172,67 @@ export const translations = {
     assocProf: "Associate Professor",
     assistProf: "Assistant Professor",
     lecturer: "Lecturer",
-    researcher: "Researcher"
+    researcher: "Researcher",
+    seniorLecturer: "Senior Lecturer",
+    deptHead: "Department Head",
+    dean: "Dean",
+    seniorResearcher: "Senior Researcher",
+    leadingResearcher: "Leading Researcher",
+    postdoc: "Postdoc",
+
+    positions: [
+      { value: 'Professor', label: 'Professor' },
+      { value: 'Associate Professor', label: 'Associate Professor' },
+      { value: 'Assistant Professor', label: 'Assistant Professor' },
+      { value: 'Senior Lecturer', label: 'Senior Lecturer' },
+      { value: 'Lecturer', label: 'Lecturer' },
+      { value: 'Department Head', label: 'Department Head' },
+      { value: 'Dean', label: 'Dean' },
+      { value: 'Researcher', label: 'Researcher' },
+      { value: 'Senior Researcher', label: 'Senior Researcher' },
+      { value: 'Leading Researcher', label: 'Leading Researcher' },
+      { value: 'Postdoc', label: 'Postdoc' },
+    ],
+
+    // Faculty List Enhancements
+    searchByName: "Search by name...",
+    exportCSV: "Export CSV",
+    exportXLSX: "Export XLSX",
+    refreshData: "Refresh Data",
+    refreshAll: "Refresh All",
+    refreshing: "Refreshing...",
+    editFaculty: "Edit",
+    lastUpdated: "Last Updated",
+    daysAgo: "d ago",
+    today: "today",
+    yesterday: "yesterday",
+    sortAsc: "Sort ascending",
+    sortDesc: "Sort descending",
+    confirmDelete: "Are you sure you want to remove this faculty member?",
+    selected: "selected",
+    selectAll: "Select all",
+    deleteSelected: "Delete Selected",
+    changeDeptSelected: "Change Department",
+    changePositionSelected: "Change Position",
+    applyToSelected: "Apply",
+    confirmBulkDelete: "Are you sure you want to delete selected faculty members?",
+
+    // Edit Modal
+    editFacultyTitle: "Edit Faculty Info",
+    saveChanges: "Save Changes",
+
+    // Batch Import
+    batchImport: "Batch Import",
+    batchImportTitle: "Batch Import from CSV",
+    batchImportDesc: "Upload a CSV file with ORCID IDs. Optional columns: department, position.",
+    defaultDept: "Default Department",
+    defaultPosition: "Default Position",
+    processing: "Processing",
+    ofTotal: "of",
+    importComplete: "Import complete",
+    importErrors: "errors",
+    startImport: "Start Import",
+    csvFormat: "CSV format: orcid, department (optional), position (optional)"
   },
   ua: {
     // Sidebar
@@ -194,6 +271,17 @@ export const translations = {
     allFaculty: "Всі викладачі",
     scopusPubs: "Індексовано в Scopus",
     wosPubs: "Індексовано в WoS",
+    pubsPerFaculty: "Публ./Викл./Рік",
+    oaRatio: "Відкритий доступ %",
+    deptComparison: "Порівняння кафедр",
+    deptCompMetric: "Метрика",
+    deptName: "Кафедра",
+    radarComparison: "Радар-порівняння кафедр",
+    selectDeptA: "Кафедра A",
+    selectDeptB: "Кафедра B",
+    oaDistribution: "Розподіл Open Access",
+    oaOpen: "Відкритий доступ",
+    oaClosed: "Закритий",
 
     // Faculty List
     name: "ПІБ",
@@ -238,6 +326,8 @@ export const translations = {
       "Порівняти продуктивність кафедр"
     ],
     errorMsg: "Вибачте, виникла помилка при обробці запиту.",
+    clearChat: "Очистити чат",
+    exportChat: "Експортувати чат",
 
     // Reports
     smartReport: "Генератор звітів",
@@ -263,6 +353,10 @@ export const translations = {
     rawView: "Текст Markdown",
     supportsFiles: "Підтримує .docx, .xlsx, .pdf, .csv, .txt, .md",
     outputFormat: "Формат",
+    reportHistory: "Історія",
+    noSavedReports: "Збережених звітів поки немає",
+    loadReport: "Завантажити",
+    deleteReport: "Видалити",
 
     // Search
     searchPageTitle: "Пошук за закладом",
@@ -309,6 +403,66 @@ export const translations = {
     assocProf: "Доцент",
     assistProf: "Старший викладач",
     lecturer: "Викладач",
-    researcher: "Науковий співробітник"
+    researcher: "Науковий співробітник",
+    seniorLecturer: "Старший викладач",
+    deptHead: "Завідувач кафедри",
+    dean: "Декан",
+    seniorResearcher: "Старший науковий співробітник",
+    leadingResearcher: "Провідний науковий співробітник",
+    postdoc: "Постдок",
+
+    positions: [
+      { value: 'Professor', label: 'Професор' },
+      { value: 'Associate Professor', label: 'Доцент' },
+      { value: 'Assistant Professor', label: 'Асистент' },
+      { value: 'Senior Lecturer', label: 'Старший викладач' },
+      { value: 'Lecturer', label: 'Викладач' },
+      { value: 'Department Head', label: 'Завідувач кафедри' },
+      { value: 'Dean', label: 'Декан' },
+      { value: 'Researcher', label: 'Науковий співробітник' },
+      { value: 'Senior Researcher', label: 'Старший науковий співробітник' },
+      { value: 'Leading Researcher', label: 'Провідний науковий співробітник' },
+      { value: 'Postdoc', label: 'Постдок' },
+    ],
+
+    // Faculty List Enhancements
+    searchByName: "Пошук за ім'ям...",
+    exportCSV: "Експорт CSV",
+    exportXLSX: "Експорт XLSX",
+    refreshData: "Оновити дані",
+    refreshAll: "Оновити всіх",
+    refreshing: "Оновлення...",
+    editFaculty: "Редагувати",
+    lastUpdated: "Останнє оновлення",
+    daysAgo: "дн. тому",
+    today: "сьогодні",
+    yesterday: "вчора",
+    sortAsc: "Сортувати за зростанням",
+    sortDesc: "Сортувати за спаданням",
+    confirmDelete: "Ви впевнені, що хочете видалити цього викладача?",
+    selected: "обрано",
+    selectAll: "Обрати всіх",
+    deleteSelected: "Видалити обраних",
+    changeDeptSelected: "Змінити кафедру",
+    changePositionSelected: "Змінити посаду",
+    applyToSelected: "Застосувати",
+    confirmBulkDelete: "Ви впевнені, що хочете видалити обраних викладачів?",
+
+    // Edit Modal
+    editFacultyTitle: "Редагувати дані викладача",
+    saveChanges: "Зберегти зміни",
+
+    // Batch Import
+    batchImport: "Масовий імпорт",
+    batchImportTitle: "Масовий імпорт з CSV",
+    batchImportDesc: "Завантажте CSV файл з ORCID ID. Додаткові колонки: кафедра, посада.",
+    defaultDept: "Кафедра за замовчуванням",
+    defaultPosition: "Посада за замовчуванням",
+    processing: "Обробка",
+    ofTotal: "з",
+    importComplete: "Імпорт завершено",
+    importErrors: "помилок",
+    startImport: "Почати імпорт",
+    csvFormat: "Формат CSV: orcid, кафедра (опціонально), посада (опціонально)"
   }
 };

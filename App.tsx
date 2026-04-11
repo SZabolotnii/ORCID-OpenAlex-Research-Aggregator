@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2 } from 'lucide-react';
 import { Faculty, ApiKeys, DataSource, Publication } from './types';
 import { fetchOrcidData } from './services/orcidService';
 import { fetchOpenAlexMetrics } from './services/openAlexService';
@@ -14,6 +14,7 @@ import FacultyList from './components/FacultyList';
 import ChatInterface from './components/ChatInterface';
 import ReportGenerator from './components/ReportGenerator';
 import PublicationDetailsModal from './components/PublicationDetailsModal';
+import ProfileModal from './components/ProfileModal';
 import OrcidSearch from './components/OrcidSearch';
 import { useLanguage } from './contexts/LanguageContext';
 
@@ -52,6 +53,19 @@ function App() {
   const [addStage, setAddStage] = useState(''); // '' | 'ORCID' | 'OPENALEX' | 'SCOPUS' | 'WOS'
   const [errorAdd, setErrorAdd] = useState('');
 
+  // Edit Faculty State
+  const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
+  const [editPosition, setEditPosition] = useState('');
+  const [editDept, setEditDept] = useState('');
+
+  // Batch Import State
+  const [isBatchImporting, setIsBatchImporting] = useState(false);
+  const [batchFile, setBatchFile] = useState<File | null>(null);
+  const [batchDefaultDept, setBatchDefaultDept] = useState('');
+  const [batchDefaultPosition, setBatchDefaultPosition] = useState('Associate Professor');
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; name: string; errors: string[] } | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+
   // Persist data with safe parsing
   useEffect(() => {
     try {
@@ -82,10 +96,22 @@ function App() {
     // 1. Fetch ORCID
     let facultyData = await fetchOrcidData(orcid, position, dept);
     
-    // 2. Fetch OpenAlex Metrics & Merge
+    // 2. Fetch OpenAlex Metrics & Merge + OA enrichment
     const metrics = await fetchOpenAlexMetrics(orcid);
     if (metrics) {
         facultyData.metrics = metrics;
+        // Enrich publications with OA status from OpenAlex topWorks (matched by DOI)
+        if (metrics.topWorks && metrics.topWorks.length > 0) {
+          const oaByDoi = new Map(metrics.topWorks.filter(w => w.doi).map(w => [w.doi.toLowerCase(), w.isOa]));
+          facultyData.publications = facultyData.publications.map(pub => {
+            if (pub.doi) {
+              const normalizedDoi = pub.doi.replace('https://doi.org/', '').toLowerCase();
+              const isOa = oaByDoi.get(normalizedDoi);
+              if (isOa !== undefined) return { ...pub, isOa };
+            }
+            return pub;
+          });
+        }
     }
 
     // 3. Fetch & Merge Scopus (Simulated or Real)
@@ -135,10 +161,114 @@ function App() {
   };
 
   const handleDelete = (id: string) => {
-    if(confirm('Are you sure you want to remove this faculty member?')) {
+    if(confirm(t.confirmDelete)) {
         setFacultyList(prev => prev.filter(f => f.orcidId !== id));
         if (selectedFaculty?.orcidId === id) setSelectedFaculty(null);
     }
+  };
+
+  const handleRefreshFaculty = async (orcidId: string) => {
+    const existing = facultyList.find(f => f.orcidId === orcidId);
+    if (!existing) return;
+
+    let facultyData = await fetchOrcidData(orcidId, existing.position, existing.department);
+    const metrics = await fetchOpenAlexMetrics(orcidId);
+    if (metrics) {
+      facultyData.metrics = metrics;
+      if (metrics.topWorks && metrics.topWorks.length > 0) {
+        const oaByDoi = new Map(metrics.topWorks.filter(w => w.doi).map(w => [w.doi.toLowerCase(), w.isOa]));
+        facultyData.publications = facultyData.publications.map(pub => {
+          if (pub.doi) {
+            const normalizedDoi = pub.doi.replace('https://doi.org/', '').toLowerCase();
+            const isOa = oaByDoi.get(normalizedDoi);
+            if (isOa !== undefined) return { ...pub, isOa };
+          }
+          return pub;
+        });
+      }
+    }
+
+    const scopusPubs = await fetchScopusData(orcidId, apiKeys.scopus);
+    if (scopusPubs.length > 0) {
+      facultyData.publications = mergePublications(facultyData.publications, scopusPubs, 'scopus');
+    }
+    const wosPubs = await fetchWosData(orcidId, apiKeys.wos);
+    if (wosPubs.length > 0) {
+      facultyData.publications = mergePublications(facultyData.publications, wosPubs, 'wos');
+    }
+
+    setFacultyList(prev => prev.map(f => f.orcidId === orcidId ? { ...facultyData, position: existing.position, department: existing.department } : f));
+  };
+
+  const handleEditFaculty = (faculty: Faculty) => {
+    setEditingFaculty(faculty);
+    setEditPosition(faculty.position);
+    setEditDept(faculty.department);
+  };
+
+  const handleBulkDelete = (ids: string[]) => {
+    setFacultyList(prev => prev.filter(f => !ids.includes(f.orcidId)));
+    if (selectedFaculty && ids.includes(selectedFaculty.orcidId)) setSelectedFaculty(null);
+  };
+
+  const handleBulkUpdate = (ids: string[], field: 'department' | 'position', value: string) => {
+    setFacultyList(prev => prev.map(f =>
+      ids.includes(f.orcidId) ? { ...f, [field]: value } : f
+    ));
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingFaculty) return;
+    setFacultyList(prev => prev.map(f =>
+      f.orcidId === editingFaculty.orcidId
+        ? { ...f, position: editPosition, department: editDept }
+        : f
+    ));
+    setEditingFaculty(null);
+  };
+
+  const handleBatchImport = async () => {
+    if (!batchFile) return;
+    setBatchRunning(true);
+    const text = await batchFile.text();
+    const Papa = (window as any).Papa;
+    const parsed = Papa.parse(text, { header: false, skipEmptyLines: true });
+    const rows: string[][] = parsed.data;
+
+    const errors: string[] = [];
+    const total = rows.length;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const orcid = (row[0] || '').trim();
+      const dept = (row[1] || '').trim() || batchDefaultDept;
+      const position = (row[2] || '').trim() || batchDefaultPosition;
+
+      if (!/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(orcid)) {
+        errors.push(`Row ${i + 1}: invalid ORCID "${orcid}"`);
+        setBatchProgress({ current: i + 1, total, name: orcid, errors: [...errors] });
+        continue;
+      }
+      if (facultyList.find(f => f.orcidId === orcid)) {
+        setBatchProgress({ current: i + 1, total, name: `${orcid} (skip)`, errors: [...errors] });
+        continue;
+      }
+
+      setBatchProgress({ current: i + 1, total, name: orcid, errors: [...errors] });
+
+      try {
+        await processAndAddFaculty(orcid, position, dept);
+      } catch (e) {
+        errors.push(`Row ${i + 1}: failed to fetch ${orcid}`);
+      }
+
+      if (i < rows.length - 1) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    setBatchProgress({ current: total, total, name: t.importComplete, errors });
+    setBatchRunning(false);
   };
 
   return (
@@ -212,7 +342,14 @@ function App() {
                 <Globe size={20} />
               </button>
 
-              <button 
+              <button
+                onClick={() => setIsBatchImporting(true)}
+                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
+              >
+                <Upload size={18} />
+                {t.batchImport}
+              </button>
+              <button
                 onClick={() => setIsAdding(true)}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
               >
@@ -224,14 +361,18 @@ function App() {
 
           <div className="p-8 max-w-7xl mx-auto w-full">
             <Routes>
-              <Route path="/" element={<Dashboard facultyList={facultyList} />} />
+              <Route path="/" element={<Dashboard facultyList={facultyList} onSelectFaculty={setSelectedFaculty} />} />
               <Route 
                 path="/faculty" 
                 element={
-                  <FacultyList 
-                    facultyList={facultyList} 
-                    onSelect={setSelectedFaculty} 
-                    onDelete={handleDelete} 
+                  <FacultyList
+                    facultyList={facultyList}
+                    onSelect={setSelectedFaculty}
+                    onDelete={handleDelete}
+                    onRefresh={handleRefreshFaculty}
+                    onEdit={handleEditFaculty}
+                    onBulkDelete={handleBulkDelete}
+                    onBulkUpdate={handleBulkUpdate}
                   />
                 } 
               />
@@ -331,16 +472,14 @@ function App() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">{t.position}</label>
-                        <select 
+                        <select
                             value={newPosition}
                             onChange={(e) => setNewPosition(e.target.value)}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                         >
-                            <option value="Professor">{t.prof}</option>
-                            <option value="Associate Professor">{t.assocProf}</option>
-                            <option value="Assistant Professor">{t.assistProf}</option>
-                            <option value="Lecturer">{t.lecturer}</option>
-                            <option value="Researcher">{t.researcher}</option>
+                            {t.positions.map((p: any) => (
+                              <option key={p.value} value={p.value}>{p.label}</option>
+                            ))}
                         </select>
                     </div>
                 </div>
@@ -370,202 +509,150 @@ function App() {
           </div>
         )}
 
-        {/* View Faculty Profile Modal - Pro Version */}
+        {/* Faculty Profile Modal */}
         {selectedFaculty && (
+          <ProfileModal
+            faculty={selectedFaculty}
+            facultyList={facultyList}
+            onClose={() => setSelectedFaculty(null)}
+            onSelectPublication={setSelectedPublication}
+            onNavigate={setSelectedFaculty}
+          />
+        )}
+
+        {/* Edit Faculty Modal */}
+        {editingFaculty && (
           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in fade-in zoom-in duration-200">
-              {/* Header */}
-              <div className="px-6 py-5 border-b border-slate-100 bg-slate-50 flex justify-between items-start">
-                <div className="flex gap-4">
-                  <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-2xl shadow-inner">
-                    {selectedFaculty.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-900">{selectedFaculty.name}</h3>
-                    <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
-                       <span className="font-medium text-indigo-600">{selectedFaculty.position}</span>
-                       <span>•</span>
-                       <span>{selectedFaculty.department}</span>
-                    </div>
-                     <div className="flex gap-2 mt-2 items-center">
-                         <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500 flex items-center gap-1">
-                           <span className="opacity-50">ORCID:</span> {selectedFaculty.orcidId}
-                         </span>
-                         {selectedFaculty.metrics && (
-                             <span className="text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded flex items-center gap-1 border border-green-100">
-                                 <Award size={12}/> Pro Data
-                             </span>
-                         )}
-                     </div>
-                  </div>
-                </div>
-                <button onClick={() => setSelectedFaculty(null)} className="text-slate-400 hover:text-slate-600 transition-colors bg-white rounded-full p-2 hover:bg-slate-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800">{t.editFacultyTitle}</h3>
+                <button onClick={() => setEditingFaculty(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
                   <X size={20} />
                 </button>
               </div>
-              
-              <div className="p-6 overflow-y-auto">
-                {/* 1. Pro Metrics Row */}
-                <div className="grid grid-cols-4 gap-4 mb-8">
-                    <div className="bg-gradient-to-br from-indigo-50 to-white p-5 rounded-xl border border-indigo-100 text-center shadow-sm relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <TrendingUp size={40} className="text-indigo-600" />
-                        </div>
-                        <div className="text-4xl font-bold text-indigo-700">{selectedFaculty.metrics?.hIndex || '-'}</div>
-                        <div className="text-xs text-indigo-500 font-bold uppercase tracking-wider mt-2">{t.hIndex}</div>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 text-center shadow-sm">
-                        <div className="text-4xl font-bold text-slate-700">{selectedFaculty.metrics?.citationCount || '-'}</div>
-                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-2">{t.citations}</div>
-                        {selectedFaculty.metrics?.citationCount2Year ? (
-                            <div className="text-[10px] text-green-600 mt-1 font-medium">
-                                +{selectedFaculty.metrics.citationCount2Year} last 2y
-                            </div>
-                        ) : null}
-                    </div>
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 text-center shadow-sm">
-                        <div className="text-4xl font-bold text-slate-700">{selectedFaculty.metrics?.i10Index || '-'}</div>
-                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-2">i10-Index</div>
-                    </div>
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 text-center shadow-sm">
-                        <div className="text-4xl font-bold text-slate-700">{selectedFaculty.publications.length}</div>
-                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-2">{t.publications}</div>
-                    </div>
+              <div className="p-6 space-y-4">
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                  <div className="font-semibold text-blue-900">{editingFaculty.name}</div>
+                  <div className="text-xs text-blue-600 font-mono">{editingFaculty.orcidId}</div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.dept}</label>
+                  <input
+                    type="text"
+                    value={editDept}
+                    onChange={(e) => setEditDept(e.target.value)}
+                    placeholder={t.enterDeptPlaceholder}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.position}</label>
+                  <select
+                    value={editPosition}
+                    onChange={(e) => setEditPosition(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    {t.positions.map((p: any) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={handleSaveEdit}
+                  className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors mt-2"
+                >
+                  {t.saveChanges}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Batch Import Modal */}
+        {isBatchImporting && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Upload size={18} className="text-indigo-600" /> {t.batchImportTitle}</h3>
+                <button onClick={() => { setIsBatchImporting(false); setBatchFile(null); setBatchProgress(null); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                  {t.batchImportDesc}
+                </p>
+                <p className="text-xs text-slate-400">{t.csvFormat}</p>
+
+                {/* File Upload */}
+                <div>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setBatchFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    {/* Left Column: Details */}
-                    <div className="md:col-span-2 space-y-8">
-                        {/* Top Cited Works (OpenAlex) */}
-                        {selectedFaculty.metrics?.topWorks && selectedFaculty.metrics.topWorks.length > 0 && (
-                             <div>
-                                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                    <Award size={18} className="text-amber-500" /> {t.topWorks}
-                                </h4>
-                                <div className="space-y-3">
-                                    {selectedFaculty.metrics.topWorks.map((work, idx) => (
-                                        <div key={idx} className="bg-white p-4 border border-slate-100 rounded-lg hover:border-indigo-100 hover:shadow-sm transition-all group">
-                                            <div className="flex justify-between items-start">
-                                                <h5 className="font-medium text-indigo-900 leading-snug">{work.title}</h5>
-                                                <span className="ml-2 flex-shrink-0 bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded">
-                                                    {work.year}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-4 mt-2 text-sm">
-                                                <span className="text-slate-500 italic truncate max-w-[200px]">{work.journal}</span>
-                                                <div className="flex items-center gap-1 text-amber-600 font-medium bg-amber-50 px-2 py-0.5 rounded-full text-xs">
-                                                    <span className="font-bold">{work.citations}</span> cit.
-                                                </div>
-                                                {work.isOa && (
-                                                    <span className="text-xs font-medium bg-green-50 text-green-700 px-2 py-0.5 rounded flex items-center gap-1 border border-green-100">
-                                                        <ExternalLink size={10} /> OA
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                             </div>
-                        )}
-
-                        {/* Recent Pubs (Merged List) */}
-                        <div>
-                          <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                            <FileBarChart size={18} className="text-slate-500" /> {t.publications} ({selectedFaculty.publications.length})
-                            <span className="text-xs text-slate-400 font-normal ml-2 flex items-center gap-1">
-                                <MousePointerClick size={12} /> Click on a row to view details
-                            </span>
-                          </h4>
-                          <div className="space-y-2">
-                            {selectedFaculty.publications.map((pub, idx) => (
-                              <button 
-                                key={idx} 
-                                onClick={() => setSelectedPublication(pub)}
-                                className="w-full text-left p-3 bg-slate-50/50 hover:bg-slate-100 border border-slate-100 rounded-lg flex flex-col gap-1 text-sm transition-colors group"
-                              >
-                                   <div className="flex justify-between items-start w-full">
-                                      <div className="font-medium text-slate-800 pr-4 group-hover:text-indigo-600 transition-colors">{pub.title}</div>
-                                      <span className="text-slate-400 font-mono text-xs whitespace-nowrap">{pub.year}</span>
-                                   </div>
-                                   <div className="flex items-center justify-between mt-1 w-full">
-                                      <div className="flex gap-1">
-                                         {pub.sources.map(s => (
-                                            <span key={s} className="text-[9px] uppercase px-1 rounded bg-slate-200 text-slate-600 font-bold tracking-wider">
-                                              {s === 'openalex' ? 'OA' : s}
-                                            </span>
-                                         ))}
-                                      </div>
-                                      {pub.citationCount !== undefined && pub.citationCount > 0 && (
-                                         <span className="text-xs text-slate-500">{pub.citationCount} cit.</span>
-                                      )}
-                                   </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                    </div>
-
-                    {/* Right Column: Sidebar info */}
-                    <div className="space-y-6">
-                         {/* Research Topics */}
-                         {selectedFaculty.metrics?.topics && selectedFaculty.metrics.topics.length > 0 && (
-                            <div>
-                                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                    <Tag size={18} className="text-slate-500" /> {t.researchTopics}
-                                </h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {selectedFaculty.metrics.topics.map((topic, i) => (
-                                        <span key={i} className="px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-medium rounded-full border border-indigo-100">
-                                            {topic.name}
-                                        </span>
-                                    ))}
-                                </div>
-                            </div>
-                         )}
-
-                         {/* Institutions */}
-                         {selectedFaculty.metrics?.institutions && selectedFaculty.metrics.institutions.length > 0 && (
-                            <div>
-                                <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                                    <Building2 size={18} className="text-slate-500" /> {t.institutions}
-                                </h4>
-                                <ul className="space-y-2">
-                                    {selectedFaculty.metrics.institutions.slice(0, 3).map((inst, i) => (
-                                        <li key={i} className="text-sm text-slate-600 flex items-start gap-2">
-                                            <span className="mt-1.5 w-1.5 h-1.5 bg-slate-300 rounded-full flex-shrink-0" />
-                                            {inst}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                         )}
-
-                         {selectedFaculty.biography && (
-                            <div>
-                                <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2">
-                                    <BookOpen size={18} className="text-slate-500" /> {t.biography}
-                                </h4>
-                                <p className="text-xs text-slate-500 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 max-h-48 overflow-y-auto">
-                                    {selectedFaculty.biography}
-                                </p>
-                            </div>
-                        )}
-
-                        <div className="pt-4 border-t border-slate-100">
-                           <h4 className="font-semibold text-slate-800 mb-2 flex items-center gap-2 text-xs uppercase tracking-wide">
-                               {t.mergedFrom}
-                           </h4>
-                           <div className="flex gap-2 flex-wrap">
-                               {/* Unique Sources Badges for the whole profile */}
-                               {Array.from(new Set(selectedFaculty.publications.flatMap(p => p.sources))).map(s => (
-                                   <div key={s} className="px-2 py-1 bg-slate-100 rounded text-xs text-slate-600 font-bold uppercase">
-                                       {s}
-                                   </div>
-                               ))}
-                           </div>
-                        </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultDept}</label>
+                    <input
+                      type="text"
+                      value={batchDefaultDept}
+                      onChange={(e) => setBatchDefaultDept(e.target.value)}
+                      placeholder={t.enterDeptPlaceholder}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultPosition}</label>
+                    <select
+                      value={batchDefaultPosition}
+                      onChange={(e) => setBatchDefaultPosition(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {t.positions.map((p: any) => (
+                        <option key={p.value} value={p.value}>{p.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
+
+                {/* Progress */}
+                {batchProgress && (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-slate-600">
+                      <span>{t.processing} {batchProgress.current} {t.ofTotal} {batchProgress.total}</span>
+                      <span className="text-xs text-slate-400 font-mono truncate max-w-[150px]">{batchProgress.name}</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2">
+                      <div
+                        className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    {batchProgress.errors.length > 0 && (
+                      <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-100 max-h-20 overflow-y-auto">
+                        {batchProgress.errors.map((e, i) => <div key={i}>{e}</div>)}
+                      </div>
+                    )}
+                    {!batchRunning && batchProgress.current === batchProgress.total && (
+                      <div className="text-sm text-green-700 bg-green-50 p-2 rounded border border-green-100 font-medium">
+                        {t.importComplete}! {batchProgress.errors.length > 0 && `(${batchProgress.errors.length} ${t.importErrors})`}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleBatchImport}
+                  disabled={!batchFile || batchRunning}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
+                >
+                  {batchRunning ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
+                  {batchRunning ? t.processing + '...' : t.startImport}
+                </button>
               </div>
             </div>
           </div>

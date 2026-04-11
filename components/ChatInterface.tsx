@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Faculty, ChatMessage } from '../types';
 import { analyzeFacultyData } from '../services/geminiService';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Trash2, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ChatInterfaceProps {
@@ -15,12 +15,38 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  // Initialize welcome message when language changes
+  const [loaded, setLoaded] = useState(false);
+
+  // Load chat history from localStorage on mount
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem('chat_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          setLoaded(true);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse chat history", e);
+    }
+    // No saved history — initialize with welcome
+    setMessages([{
+      id: 'welcome',
+      role: 'model',
+      content: language === 'ua' ? t.welcomeMessageUA : t.welcomeMessage,
+      timestamp: Date.now()
+    }]);
+    setLoaded(true);
+  }, []);
+
+  // Update welcome message when language changes (only if we just have the welcome)
+  useEffect(() => {
+    if (!loaded) return;
     setMessages(prev => {
-      // If empty or only has the other language's welcome message, reset
-      if (prev.length === 0 || (prev.length === 1 && prev[0].id === 'welcome')) {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
         return [{
           id: 'welcome',
           role: 'model',
@@ -30,7 +56,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
       }
       return prev;
     });
-  }, [language, t.welcomeMessage, t.welcomeMessageUA]);
+  }, [language, t.welcomeMessage, t.welcomeMessageUA, loaded]);
+
+  // Save to localStorage whenever messages change
+  useEffect(() => {
+    if (loaded && messages.length > 0) {
+      localStorage.setItem('chat_history', JSON.stringify(messages));
+    }
+  }, [messages, loaded]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -55,9 +88,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
     setIsLoading(true);
 
     try {
-      // Pass the current history (messages) along with the new query
       const response = await analyzeFacultyData(facultyList, userMsg.content, messages, language);
-      
+
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'model',
@@ -79,12 +111,56 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
     }
   };
 
+  const handleClearChat = () => {
+    const welcome: ChatMessage = {
+      id: 'welcome',
+      role: 'model',
+      content: language === 'ua' ? t.welcomeMessageUA : t.welcomeMessage,
+      timestamp: Date.now()
+    };
+    setMessages([welcome]);
+    localStorage.removeItem('chat_history');
+  };
+
+  const handleExportChat = () => {
+    const md = messages
+      .filter(m => m.id !== 'welcome')
+      .map(m => `**${m.role === 'user' ? 'User' : 'AI'}** (${new Date(m.timestamp).toLocaleString()}):\n${m.content}`)
+      .join('\n\n---\n\n');
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat_export_${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-[600px] bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-indigo-600" />
-        <h3 className="font-semibold text-slate-700">{t.chatHeader}</h3>
+      <div className="bg-slate-50 border-b border-slate-200 p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-5 h-5 text-indigo-600" />
+          <h3 className="font-semibold text-slate-700">{t.chatHeader}</h3>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handleExportChat}
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+            title={t.exportChat}
+          >
+            <Download size={16} />
+          </button>
+          <button
+            onClick={handleClearChat}
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+            title={t.clearChat}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -96,8 +172,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
                 {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
               </div>
               <div className={`p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${
-                msg.role === 'user' 
-                  ? 'bg-blue-600 text-white rounded-tr-none' 
+                msg.role === 'user'
+                  ? 'bg-blue-600 text-white rounded-tr-none'
                   : 'bg-white text-slate-700 border border-slate-200 rounded-tl-none prose prose-sm max-w-none'
               }`}>
                 {msg.role === 'model' ? (
@@ -147,8 +223,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
         </div>
         <div className="mt-2 text-xs text-slate-400 flex gap-2 overflow-x-auto pb-1">
           {t.hints.map((hint, i) => (
-            <button 
-              key={i} 
+            <button
+              key={i}
               onClick={() => setInput(hint)}
               className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-slate-600 whitespace-nowrap transition-colors"
             >

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Faculty } from '../types';
+import { Faculty, SavedReport } from '../types';
 import { generateReportContent, fillReportTemplate } from '../services/geminiService';
-import { FileText, Download, Loader2, CheckCircle, UploadCloud, FileSpreadsheet, FileType, Eye, Code, File, Filter } from 'lucide-react';
+import { FileText, Download, Loader2, CheckCircle, UploadCloud, FileSpreadsheet, FileType, Eye, Code, File, Filter, History, Trash2 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 declare global {
@@ -11,6 +11,7 @@ declare global {
     XLSX: any;
     pdfjsLib: any;
     marked: any;
+    jspdf: any;
   }
 }
 
@@ -20,7 +21,45 @@ interface ReportGeneratorProps {
 
 const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
   const { t, language } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'standard' | 'custom'>('standard');
+  const [activeTab, setActiveTab] = useState<'standard' | 'custom' | 'history'>('standard');
+
+  // Report History
+  const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('saved_reports');
+      if (saved) setSavedReports(JSON.parse(saved));
+    } catch (e) {
+      console.error("Failed to parse saved reports", e);
+    }
+  }, []);
+
+  const saveReport = (content: string) => {
+    const report: SavedReport = {
+      id: Date.now().toString(),
+      title: `${type} — ${department}`,
+      type,
+      department,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [report, ...savedReports].slice(0, 10);
+    setSavedReports(updated);
+    localStorage.setItem('saved_reports', JSON.stringify(updated));
+  };
+
+  const deleteReport = (id: string) => {
+    const updated = savedReports.filter(r => r.id !== id);
+    setSavedReports(updated);
+    localStorage.setItem('saved_reports', JSON.stringify(updated));
+  };
+
+  const loadReport = (report: SavedReport) => {
+    setLastReport(report.content);
+    setActiveTab('standard');
+    setViewMode('preview');
+  };
   
   // Standard Report State
   const [department, setDepartment] = useState('All');
@@ -40,7 +79,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Download format state
-  const [downloadFormat, setDownloadFormat] = useState<'docx' | 'md' | 'txt' | 'xlsx'>('docx');
+  const [downloadFormat, setDownloadFormat] = useState<'docx' | 'md' | 'txt' | 'xlsx' | 'pdf'>('docx');
 
   // Extract unique departments
   const departments = ['All', ...Array.from(new Set(facultyList.map(f => f.department)))];
@@ -77,7 +116,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     try {
       const content = await generateReportContent(facultyList, type, department, facultyId, language);
       setLastReport(content);
-      setViewMode('preview'); // Default to preview
+      if (content) saveReport(content);
+      setViewMode('preview');
     } catch (e) {
       console.error("Error generating standard report", e);
     } finally {
@@ -101,7 +141,8 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
         facultyId
       );
       setLastReport(content);
-      setViewMode('preview'); 
+      if (content) saveReport(content);
+      setViewMode('preview');
     } catch (e) {
       console.error("Error generating from template", e);
     } finally {
@@ -224,12 +265,45 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     }
   };
 
+  // Parse Markdown tables into 2D arrays for structured XLSX export
+  const parseMarkdownTables = (md: string): { headers: string[]; rows: string[][] }[] => {
+    const tables: { headers: string[]; rows: string[][] }[] = [];
+    const lines = md.split('\n');
+    let i = 0;
+    while (i < lines.length) {
+      const line = lines[i].trim();
+      // Detect table header row (has | delimiters)
+      if (line.startsWith('|') && line.endsWith('|') && i + 1 < lines.length) {
+        const nextLine = lines[i + 1]?.trim() || '';
+        // Check separator row (|---|---|)
+        if (/^\|[\s\-:|]+\|$/.test(nextLine)) {
+          const headers = line.split('|').filter(c => c.trim()).map(c => c.trim());
+          const tableRows: string[][] = [];
+          i += 2; // Skip header + separator
+          while (i < lines.length && lines[i].trim().startsWith('|') && lines[i].trim().endsWith('|')) {
+            const cells = lines[i].split('|').filter(c => c.trim() !== '' || lines[i].indexOf(c) > 0).map(c => c.trim()).filter((_, idx, arr) => idx > 0 || arr.length === headers.length);
+            const cleaned = lines[i].split('|').slice(1, -1).map(c => c.trim());
+            tableRows.push(cleaned);
+            i++;
+          }
+          if (headers.length > 0) {
+            tables.push({ headers, rows: tableRows });
+          }
+          continue;
+        }
+      }
+      i++;
+    }
+    return tables;
+  };
+
   const handleDownload = () => {
     if (!lastReport) return;
-    
+
     let content = lastReport;
     let mimeType = '';
     let extension = '';
+    const fileName = `Report_${activeTab}_${new Date().toISOString().split('T')[0]}`;
 
     if (downloadFormat === 'md') {
         mimeType = 'text/markdown';
@@ -237,22 +311,116 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     } else if (downloadFormat === 'txt') {
         mimeType = 'text/plain';
         extension = 'txt';
+    } else if (downloadFormat === 'pdf') {
+        // PDF Export via jsPDF
+        if (window.jspdf) {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+          // Parse markdown to structured content
+          const lines = lastReport.split('\n');
+          let y = 20;
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const margin = 15;
+          const maxWidth = pageWidth - margin * 2;
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) { y += 4; continue; }
+
+            // Check if we need a new page
+            if (y > 270) {
+              doc.addPage();
+              y = 20;
+            }
+
+            if (trimmed.startsWith('# ')) {
+              doc.setFontSize(18);
+              doc.setFont('helvetica', 'bold');
+              doc.text(trimmed.replace(/^#+\s*/, ''), margin, y);
+              y += 10;
+            } else if (trimmed.startsWith('## ')) {
+              doc.setFontSize(14);
+              doc.setFont('helvetica', 'bold');
+              doc.text(trimmed.replace(/^#+\s*/, ''), margin, y);
+              y += 8;
+            } else if (trimmed.startsWith('### ')) {
+              doc.setFontSize(12);
+              doc.setFont('helvetica', 'bold');
+              doc.text(trimmed.replace(/^#+\s*/, ''), margin, y);
+              y += 7;
+            } else if (trimmed.startsWith('|') && trimmed.endsWith('|') && /^\|[\s\-:|]+\|$/.test(trimmed)) {
+              // Skip separator rows in tables — handled by autoTable
+              continue;
+            } else if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+              // Table row — collect full table and render with autoTable
+              const tableStart = lines.indexOf(line);
+              const tables = parseMarkdownTables(lines.slice(Math.max(0, tableStart - 1)).join('\n'));
+              if (tables.length > 0) {
+                const table = tables[0];
+                (doc as any).autoTable({
+                  startY: y,
+                  head: [table.headers],
+                  body: table.rows,
+                  margin: { left: margin, right: margin },
+                  styles: { fontSize: 8, cellPadding: 2 },
+                  headStyles: { fillColor: [79, 70, 229] },
+                });
+                y = (doc as any).lastAutoTable.finalY + 6;
+                // Skip remaining table rows in the loop
+                continue;
+              }
+            } else {
+              doc.setFontSize(10);
+              doc.setFont('helvetica', 'normal');
+              const cleanText = trimmed.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+              const splitLines = doc.splitTextToSize(cleanText, maxWidth);
+              doc.text(splitLines, margin, y);
+              y += splitLines.length * 5;
+            }
+          }
+
+          // Page numbers
+          const totalPages = doc.getNumberOfPages();
+          for (let p = 1; p <= totalPages; p++) {
+            doc.setPage(p);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${p} / ${totalPages}`, pageWidth - margin, 290, { align: 'right' });
+          }
+
+          doc.save(`${fileName}.pdf`);
+          return;
+        } else {
+          alert('jsPDF not loaded. Downloading as Markdown.');
+          mimeType = 'text/markdown';
+          extension = 'md';
+        }
     } else if (downloadFormat === 'xlsx') {
         if (window.XLSX) {
              const wb = window.XLSX.utils.book_new();
-             const ws = window.XLSX.utils.aoa_to_sheet([[content]]); // Fallback
-             try {
-                if (content.includes(',')) {
-                    const wsCsv = window.XLSX.utils.csv_to_sheet(content);
-                    window.XLSX.utils.book_append_sheet(wb, wsCsv, "Report");
-                } else {
-                    window.XLSX.utils.book_append_sheet(wb, ws, "Report");
-                }
-             } catch {
-                 window.XLSX.utils.book_append_sheet(wb, ws, "Report");
+
+             // Try to parse Markdown tables into structured sheets
+             const tables = parseMarkdownTables(content);
+
+             if (tables.length > 0) {
+               tables.forEach((table, idx) => {
+                 const sheetData = [table.headers, ...table.rows];
+                 const ws = window.XLSX.utils.aoa_to_sheet(sheetData);
+                 // Auto-size columns
+                 ws['!cols'] = table.headers.map((h: string) => ({ wch: Math.max(h.length, 15) }));
+                 window.XLSX.utils.book_append_sheet(wb, ws, `Table ${idx + 1}`);
+               });
+             } else {
+               // Fallback: split content by lines instead of one cell
+               const rows = content.split('\n').map(line => [line.replace(/\*\*/g, '').replace(/\|/g, '').trim()]);
+               const ws = window.XLSX.utils.aoa_to_sheet(rows);
+               ws['!cols'] = [{ wch: 100 }];
+               window.XLSX.utils.book_append_sheet(wb, ws, "Report");
              }
-             window.XLSX.writeFile(wb, `Report_${activeTab}_${new Date().toISOString().split('T')[0]}.xlsx`);
-             return; 
+
+             window.XLSX.writeFile(wb, `${fileName}.xlsx`);
+             return;
         } else {
             alert("XLSX library not loaded. Downloading as CSV.");
             mimeType = 'text/csv';
@@ -262,7 +430,6 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
         // DOCX default
         mimeType = 'application/msword';
         extension = 'doc';
-        // Basic HTML wrapper for DOCX
         content = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head><title>Report</title></head>
@@ -278,7 +445,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Report_${activeTab}_${new Date().toISOString().split('T')[0]}.${extension}`;
+    a.download = `${fileName}.${extension}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -321,25 +488,36 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       {/* Tabs */}
       <div className="flex border-b border-slate-200">
-        <button 
+        <button
           onClick={() => setActiveTab('standard')}
           className={`flex-1 py-4 px-6 text-sm font-medium transition-colors ${
-            activeTab === 'standard' 
-              ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' 
+            activeTab === 'standard'
+              ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
               : 'bg-slate-50 text-slate-500 hover:text-slate-700'
           }`}
         >
           {t.standardReports}
         </button>
-        <button 
+        <button
            onClick={() => setActiveTab('custom')}
            className={`flex-1 py-4 px-6 text-sm font-medium transition-colors ${
-            activeTab === 'custom' 
-              ? 'bg-white text-indigo-600 border-b-2 border-indigo-600' 
+            activeTab === 'custom'
+              ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
               : 'bg-slate-50 text-slate-500 hover:text-slate-700'
           }`}
         >
           {t.customTemplates}
+        </button>
+        <button
+           onClick={() => setActiveTab('history')}
+           className={`flex-1 py-4 px-6 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            activeTab === 'history'
+              ? 'bg-white text-indigo-600 border-b-2 border-indigo-600'
+              : 'bg-slate-50 text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <History size={16} />
+          {t.reportHistory} {savedReports.length > 0 && `(${savedReports.length})`}
         </button>
       </div>
 
@@ -368,6 +546,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
                       <option value="annual">Annual Activity Report</option>
                       <option value="department">Department Overview</option>
                       <option value="individual">Individual Performance Summary</option>
+                      <option value="scopus_wos">Scopus/WoS Publication List</option>
+                      <option value="faculty_card">Faculty Activity Card</option>
+                      <option value="accreditation">Accreditation Report</option>
                   </select>
                 </div>
                 
@@ -510,6 +691,43 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
           </div>
         )}
 
+        {/* History Tab */}
+        {activeTab === 'history' && (
+          <div className="space-y-3">
+            {savedReports.length === 0 ? (
+              <div className="text-center py-8 text-slate-400">
+                <History className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p>{t.noSavedReports}</p>
+              </div>
+            ) : (
+              savedReports.map(report => (
+                <div key={report.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-200 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-800 text-sm truncate">{report.title}</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      {new Date(report.createdAt).toLocaleString()} · {report.content.length} chars
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 ml-4">
+                    <button
+                      onClick={() => loadReport(report)}
+                      className="px-3 py-1.5 text-xs font-medium bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors"
+                    >
+                      {t.loadReport}
+                    </button>
+                    <button
+                      onClick={() => deleteReport(report.id)}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
         {/* Output Section */}
         {lastReport && (
             <div className="mt-8 pt-6 border-t border-slate-100">
@@ -543,6 +761,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 py-1.5 px-2 rounded-lg text-sm font-medium border-none outline-none cursor-pointer"
                            >
                                <option value="docx">Word (.doc)</option>
+                               <option value="pdf">PDF (.pdf)</option>
                                <option value="md">Markdown (.md)</option>
                                <option value="txt">Text (.txt)</option>
                                <option value="xlsx">Excel (.xlsx)</option>

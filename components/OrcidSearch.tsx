@@ -167,16 +167,14 @@ const OrcidSearch: React.FC<OrcidSearchProps> = ({ existingFaculty, onAddFaculty
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t.position}</label>
-                <select 
+                <select
                     value={newPosition}
                     onChange={(e) => setNewPosition(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                    <option value="Professor">{t.prof}</option>
-                    <option value="Associate Professor">{t.assocProf}</option>
-                    <option value="Assistant Professor">{t.assistProf}</option>
-                    <option value="Lecturer">{t.lecturer}</option>
-                    <option value="Researcher">{t.researcher}</option>
+                    {t.positions.map((p: any) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
                 </select>
               </div>
 

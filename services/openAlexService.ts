@@ -35,8 +35,8 @@ export const fetchOpenAlexMetrics = async (orcidId: string): Promise<OpenAlexMet
       .map((y: any) => ({ year: y.year, citations: y.cited_by_count, works: y.works_count }))
       .sort((a: any, b: any) => a.year - b.year);
 
-    // 2. Fetch Top Works (for detailed citation counts per paper)
-    const worksUrl = `${BASE_URL}/works?filter=author.orcid:${orcidId}&sort=cited_by_count:desc&per_page=5&mailto=${MAILTO}`;
+    // 2. Fetch Top Works (for detailed citation counts per paper) — increased to 25 for OA enrichment
+    const worksUrl = `${BASE_URL}/works?filter=author.orcid:${orcidId}&sort=cited_by_count:desc&per_page=25&mailto=${MAILTO}`;
     const worksRes = await fetch(worksUrl);
     let topWorks: WorkMetric[] = [];
 

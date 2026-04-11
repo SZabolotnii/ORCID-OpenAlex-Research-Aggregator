@@ -13,6 +13,7 @@ export interface Publication {
   citationCount?: number; // Highest found citation count
   authors?: string[]; // List of author names
   abstract?: string; // Paper abstract
+  isOa?: boolean; // Open Access status from OpenAlex
 }
 
 export interface OpenAlexTopic {
@@ -77,4 +78,13 @@ export interface ReportConfig {
 export interface ApiKeys {
   scopus?: string;
   wos?: string;
+}
+
+export interface SavedReport {
+  id: string;
+  title: string;
+  type: string;
+  department: string;
+  content: string;
+  createdAt: string;
 }
