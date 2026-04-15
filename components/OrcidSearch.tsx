@@ -8,7 +8,7 @@ import { Faculty } from '../types';
 
 interface OrcidSearchProps {
   existingFaculty: Faculty[];
-  onAddFaculty: (orcid: string, position: string, department: string) => Promise<void>;
+  onAddFaculty: (orcid: string, position: string, department: string, institution?: string) => Promise<void>;
 }
 
 const OrcidSearch: React.FC<OrcidSearchProps> = ({ existingFaculty, onAddFaculty }) => {
@@ -21,6 +21,7 @@ const OrcidSearch: React.FC<OrcidSearchProps> = ({ existingFaculty, onAddFaculty
   // State for the "Add" modal
   const [selectedResult, setSelectedResult] = useState<{ orcidId: string, name: string } | null>(null);
   const [newPosition, setNewPosition] = useState('Associate Professor');
+  const [newInstitution, setNewInstitution] = useState('');
   const [newDept, setNewDept] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
@@ -51,7 +52,7 @@ const OrcidSearch: React.FC<OrcidSearchProps> = ({ existingFaculty, onAddFaculty
     if (!selectedResult) return;
     setIsAdding(true);
     try {
-      await onAddFaculty(selectedResult.orcidId, newPosition, newDept);
+      await onAddFaculty(selectedResult.orcidId, newPosition, newDept, newInstitution);
       setSelectedResult(null); // Close modal
     } catch (error) {
       console.error("Failed to add", error);
@@ -155,6 +156,16 @@ const OrcidSearch: React.FC<OrcidSearchProps> = ({ existingFaculty, onAddFaculty
               
               <p className="text-sm text-slate-500">{t.assignInfoDesc}</p>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">{t.institution}</label>
+                <input
+                    type="text"
+                    value={newInstitution}
+                    onChange={(e) => setNewInstitution(e.target.value)}
+                    placeholder={t.enterInstitutionPlaceholder}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">{t.dept}</label>
                 <input 

@@ -52,12 +52,13 @@ export interface OpenAlexMetrics {
 export interface Faculty {
   orcidId: string;
   name: string;
-  position: string; 
-  department: string; 
+  position: string;
+  department: string;
+  institution?: string;
   country: string | null;
   biography: string | null;
   publications: Publication[];
-  metrics?: OpenAlexMetrics; 
+  metrics?: OpenAlexMetrics;
   lastUpdated: string;
 }
 

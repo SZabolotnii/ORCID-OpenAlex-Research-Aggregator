@@ -151,13 +151,14 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
   };
 
   const handleExportCSV = () => {
-    const headers = ['Name', 'ORCID', 'Department', 'Position', 'H-Index', 'Citations', 'i10-Index', 'Publications', 'Scopus', 'WoS', 'Last Updated'];
+    const headers = ['Name', 'ORCID', 'Institution', 'Department', 'Position', 'H-Index', 'Citations', 'i10-Index', 'Publications', 'Scopus', 'WoS', 'Last Updated'];
     const rows = filteredAndSorted.map(f => {
       const scopusCount = f.publications.filter(p => p.sources.includes('scopus')).length;
       const wosCount = f.publications.filter(p => p.sources.includes('wos')).length;
       return [
         f.name,
         f.orcidId,
+        f.institution || '',
         f.department,
         f.position,
         f.metrics?.hIndex ?? '',
@@ -408,9 +409,14 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
-                        {faculty.department}
-                      </span>
+                      <div>
+                        {faculty.institution && (
+                          <div className="text-xs text-slate-400 mb-0.5">{faculty.institution}</div>
+                        )}
+                        <span className="px-2 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-medium">
+                          {faculty.department || '—'}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {/* Show translated position label */}

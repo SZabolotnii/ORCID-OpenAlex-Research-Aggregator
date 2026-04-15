@@ -170,12 +170,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ faculty, facultyList, onClo
             </div>
             <div>
               <h3 className="text-2xl font-bold text-slate-900">{faculty.name}</h3>
-              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1 flex-wrap">
                  <span className="font-medium text-indigo-600">
                    {t.positions?.find((p: any) => p.value === faculty.position)?.label || faculty.position}
                  </span>
-                 <span>•</span>
-                 <span>{faculty.department}</span>
+                 {faculty.department && <><span>•</span><span>{faculty.department}</span></>}
+                 {faculty.institution && <><span>•</span><span className="text-slate-400">{faculty.institution}</span></>}
               </div>
                <div className="flex gap-2 mt-2 items-center">
                    <span className="text-xs font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-500 flex items-center gap-1">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2 } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2, Save, FolderDown, FileSpreadsheet } from 'lucide-react';
 import { Faculty, ApiKeys, DataSource, Publication } from './types';
 import { fetchOrcidData } from './services/orcidService';
 import { fetchOpenAlexMetrics } from './services/openAlexService';
@@ -48,6 +48,7 @@ function App() {
   // Add Faculty Form State
   const [newOrcid, setNewOrcid] = useState('');
   const [newPosition, setNewPosition] = useState('Associate Professor');
+  const [newInstitution, setNewInstitution] = useState('');
   const [newDept, setNewDept] = useState('');
   const [loadingAdd, setLoadingAdd] = useState(false);
   const [addStage, setAddStage] = useState(''); // '' | 'ORCID' | 'OPENALEX' | 'SCOPUS' | 'WOS'
@@ -56,11 +57,13 @@ function App() {
   // Edit Faculty State
   const [editingFaculty, setEditingFaculty] = useState<Faculty | null>(null);
   const [editPosition, setEditPosition] = useState('');
+  const [editInstitution, setEditInstitution] = useState('');
   const [editDept, setEditDept] = useState('');
 
   // Batch Import State
   const [isBatchImporting, setIsBatchImporting] = useState(false);
   const [batchFile, setBatchFile] = useState<File | null>(null);
+  const [batchDefaultInstitution, setBatchDefaultInstitution] = useState('');
   const [batchDefaultDept, setBatchDefaultDept] = useState('');
   const [batchDefaultPosition, setBatchDefaultPosition] = useState('Associate Professor');
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; name: string; errors: string[] } | null>(null);
@@ -92,7 +95,7 @@ function App() {
   };
 
   // Logic extracted to function for reuse in Search component
-  const processAndAddFaculty = async (orcid: string, position: string, dept: string) => {
+  const processAndAddFaculty = async (orcid: string, position: string, dept: string, institution?: string) => {
     // 1. Fetch ORCID
     let facultyData = await fetchOrcidData(orcid, position, dept);
     
@@ -126,6 +129,7 @@ function App() {
       facultyData.publications = mergePublications(facultyData.publications, wosPubs, 'wos');
     }
 
+    if (institution) facultyData.institution = institution;
     setFacultyList(prev => [...prev, facultyData]);
   };
 
@@ -147,7 +151,7 @@ function App() {
     setAddStage('ORCID');
     setErrorAdd('');
     try {
-      await processAndAddFaculty(newOrcid, newPosition, newDept);
+      await processAndAddFaculty(newOrcid, newPosition, newDept, newInstitution);
       setNewOrcid('');
       setNewDept('');
       setIsAdding(false);
@@ -203,6 +207,7 @@ function App() {
   const handleEditFaculty = (faculty: Faculty) => {
     setEditingFaculty(faculty);
     setEditPosition(faculty.position);
+    setEditInstitution(faculty.institution || '');
     setEditDept(faculty.department);
   };
 
@@ -211,7 +216,7 @@ function App() {
     if (selectedFaculty && ids.includes(selectedFaculty.orcidId)) setSelectedFaculty(null);
   };
 
-  const handleBulkUpdate = (ids: string[], field: 'department' | 'position', value: string) => {
+  const handleBulkUpdate = (ids: string[], field: 'department' | 'position' | 'institution', value: string) => {
     setFacultyList(prev => prev.map(f =>
       ids.includes(f.orcidId) ? { ...f, [field]: value } : f
     ));
@@ -221,7 +226,7 @@ function App() {
     if (!editingFaculty) return;
     setFacultyList(prev => prev.map(f =>
       f.orcidId === editingFaculty.orcidId
-        ? { ...f, position: editPosition, department: editDept }
+        ? { ...f, position: editPosition, institution: editInstitution, department: editDept }
         : f
     ));
     setEditingFaculty(null);
@@ -257,7 +262,7 @@ function App() {
       setBatchProgress({ current: i + 1, total, name: orcid, errors: [...errors] });
 
       try {
-        await processAndAddFaculty(orcid, position, dept);
+        await processAndAddFaculty(orcid, position, dept, batchDefaultInstitution);
       } catch (e) {
         errors.push(`Row ${i + 1}: failed to fetch ${orcid}`);
       }
@@ -269,6 +274,78 @@ function App() {
 
     setBatchProgress({ current: total, total, name: t.importComplete, errors });
     setBatchRunning(false);
+  };
+
+  // Save all data as JSON backup
+  const handleSaveJSON = () => {
+    const data = JSON.stringify(facultyList, null, 2);
+    const blob = new Blob([data], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const deptName = facultyList[0]?.department?.replace(/\s+/g, '_') || 'faculty';
+    a.download = `${deptName}_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Load data from JSON backup
+  const handleLoadJSON = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (Array.isArray(data) && data.length > 0 && data[0].orcidId) {
+          setFacultyList(data);
+          alert(t.dataLoaded + ` (${data.length})`);
+        } else {
+          alert('Invalid JSON format');
+        }
+      } catch (err) {
+        alert('Failed to parse JSON file');
+      }
+    };
+    input.click();
+  };
+
+  // Export full CSV with publications
+  const handleExportFullCSV = () => {
+    const headers = ['Name', 'ORCID', 'Institution', 'Department', 'Position', 'H-Index', 'Citations', 'i10-Index', 'Pub Title', 'Pub Year', 'Journal', 'Type', 'DOI', 'Sources', 'Pub Citations', 'Open Access'];
+    const rows: string[] = [];
+
+    facultyList.forEach(f => {
+      if (f.publications.length === 0) {
+        rows.push([
+          f.name, f.orcidId, f.institution || '', f.department, f.position,
+          f.metrics?.hIndex ?? '', f.metrics?.citationCount ?? '', f.metrics?.i10Index ?? '',
+          '', '', '', '', '', '', '', ''
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+      } else {
+        f.publications.forEach(pub => {
+          rows.push([
+            f.name, f.orcidId, f.institution || '', f.department, f.position,
+            f.metrics?.hIndex ?? '', f.metrics?.citationCount ?? '', f.metrics?.i10Index ?? '',
+            pub.title, pub.year, pub.journal || '', pub.type, pub.doi || '',
+            pub.sources.join('; '), pub.citationCount ?? '', pub.isOa ? 'Yes' : ''
+          ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
+        });
+      }
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const deptName = facultyList[0]?.department?.replace(/\s+/g, '_') || 'faculty';
+    a.download = `${deptName}_full_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -314,7 +391,34 @@ function App() {
                 </button>
              </div>
 
-             <button 
+             {/* Data Management */}
+             {facultyList.length > 0 && (
+               <div className="space-y-1">
+                 <button
+                   onClick={handleSaveJSON}
+                   className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+                 >
+                   <Save size={16} />
+                   {t.saveData}
+                 </button>
+                 <button
+                   onClick={handleExportFullCSV}
+                   className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+                 >
+                   <FileSpreadsheet size={16} />
+                   {t.exportFullCSV}
+                 </button>
+               </div>
+             )}
+             <button
+               onClick={handleLoadJSON}
+               className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+             >
+               <FolderDown size={16} />
+               {t.loadData}
+             </button>
+
+             <button
                 onClick={() => setIsSettingsOpen(true)}
                 className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
              >
@@ -459,10 +563,20 @@ function App() {
                   />
                   <p className="text-xs text-slate-500 mt-1">{t.mustBePublic}</p>
                 </div>
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">{t.institution}</label>
+                    <input
+                        type="text"
+                        value={newInstitution}
+                        onChange={(e) => setNewInstitution(e.target.value)}
+                        placeholder={t.enterInstitutionPlaceholder}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">{t.dept}</label>
-                        <input 
+                        <input
                             type="text"
                             value={newDept}
                             onChange={(e) => setNewDept(e.target.value)}
@@ -536,6 +650,16 @@ function App() {
                   <div className="text-xs text-blue-600 font-mono">{editingFaculty.orcidId}</div>
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.institution}</label>
+                  <input
+                    type="text"
+                    value={editInstitution}
+                    onChange={(e) => setEditInstitution(e.target.value)}
+                    placeholder={t.enterInstitutionPlaceholder}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">{t.dept}</label>
                   <input
                     type="text"
@@ -594,6 +718,16 @@ function App() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultInstitution}</label>
+                  <input
+                    type="text"
+                    value={batchDefaultInstitution}
+                    onChange={(e) => setBatchDefaultInstitution(e.target.value)}
+                    placeholder={t.enterInstitutionPlaceholder}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultDept}</label>
