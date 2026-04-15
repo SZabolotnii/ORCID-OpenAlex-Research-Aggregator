@@ -95,8 +95,10 @@ const Dashboard: React.FC<DashboardProps> = ({ facultyList, onSelectFaculty }) =
       }
     }, 0);
 
-    const avgHIndex = totalFaculty > 0 
-        ? (filteredFaculty.reduce((acc, curr) => acc + (curr.metrics?.hIndex || 0), 0) / totalFaculty).toFixed(1)
+    // Avg H-Index: only count faculty who have metrics (not all faculty)
+    const facultyWithMetrics = filteredFaculty.filter(f => f.metrics);
+    const avgHIndex = facultyWithMetrics.length > 0
+        ? (facultyWithMetrics.reduce((acc, curr) => acc + (curr.metrics?.hIndex || 0), 0) / facultyWithMetrics.length).toFixed(1)
         : "0";
     
     // Scopus & WoS stats (filtered by year)
