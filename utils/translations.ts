@@ -240,7 +240,28 @@ export const translations = {
     importComplete: "Import complete",
     importErrors: "errors",
     startImport: "Start Import",
-    csvFormat: "CSV format: orcid, department (optional), position (optional)"
+    csvFormat: "CSV format: orcid, department (optional), position (optional)",
+
+    // Auth / Admin
+    adminMode: "Admin Mode",
+    userMode: "Viewer Mode",
+    loginAdmin: "Admin Login",
+    logoutAdmin: "Exit Admin",
+    enterPassword: "Enter admin password",
+    password: "Password",
+    login: "Login",
+    cancel: "Cancel",
+    wrongPassword: "Wrong password",
+    setPassword: "Set Admin Password",
+    newPassword: "New Password",
+    confirmPassword: "Confirm Password",
+    passwordMismatch: "Passwords don't match",
+    passwordTooShort: "Password must be at least 4 characters",
+    passwordSet: "Admin password has been set",
+    readOnlyMode: "View-only mode. Log in as admin to manage data.",
+    changePassword: "Change Password",
+    currentPassword: "Current Password",
+    wrongCurrentPassword: "Wrong current password"
   },
   ua: {
     // Sidebar
@@ -479,6 +500,27 @@ export const translations = {
     importComplete: "Імпорт завершено",
     importErrors: "помилок",
     startImport: "Почати імпорт",
-    csvFormat: "Формат CSV: orcid, кафедра (опціонально), посада (опціонально)"
+    csvFormat: "Формат CSV: orcid, кафедра (опціонально), посада (опціонально)",
+
+    // Auth / Admin
+    adminMode: "Режим адміністратора",
+    userMode: "Режим перегляду",
+    loginAdmin: "Вхід адміністратора",
+    logoutAdmin: "Вийти з адмін",
+    enterPassword: "Введіть пароль адміністратора",
+    password: "Пароль",
+    login: "Увійти",
+    cancel: "Скасувати",
+    wrongPassword: "Невірний пароль",
+    setPassword: "Встановити пароль адміністратора",
+    newPassword: "Новий пароль",
+    confirmPassword: "Підтвердіть пароль",
+    passwordMismatch: "Паролі не збігаються",
+    passwordTooShort: "Пароль має бути мінімум 4 символи",
+    passwordSet: "Пароль адміністратора встановлено",
+    readOnlyMode: "Режим перегляду. Увійдіть як адміністратор для управління даними.",
+    changePassword: "Змінити пароль",
+    currentPassword: "Поточний пароль",
+    wrongCurrentPassword: "Невірний поточний пароль"
   }
 };

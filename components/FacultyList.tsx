@@ -15,6 +15,7 @@ interface FacultyListProps {
   onEdit?: (faculty: Faculty) => void;
   onBulkDelete?: (ids: string[]) => void;
   onBulkUpdate?: (ids: string[], field: 'department' | 'position', value: string) => void;
+  isAdmin?: boolean;
 }
 
 const SourceBadge: React.FC<{ source: DataSource }> = ({ source }) => {
@@ -50,7 +51,7 @@ function formatRelativeDate(isoString: string, t: any): string {
   return `${diffDays} ${t.daysAgo}`;
 }
 
-const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDelete, onRefresh, onEdit, onBulkDelete, onBulkUpdate }) => {
+const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDelete, onRefresh, onEdit, onBulkDelete, onBulkUpdate, isAdmin = false }) => {
   const { t } = useLanguage();
 
   const [sortField, setSortField] = useState<SortField>('name');
@@ -272,7 +273,7 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
               {t.exportCSV}
             </button>
 
-            {onRefresh && (
+            {isAdmin && onRefresh && (
               <button
                 onClick={handleRefreshAll}
                 disabled={refreshingAll}
@@ -287,8 +288,8 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
         </div>
       </div>
 
-      {/* Bulk Actions Toolbar */}
-      {selectedIds.size > 0 && (
+      {/* Bulk Actions Toolbar — admin only */}
+      {isAdmin && selectedIds.size > 0 && (
         <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex flex-wrap items-center gap-3">
           <span className="text-sm font-medium text-indigo-700">
             {selectedIds.size} {t.selected}
@@ -345,14 +346,16 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
               <tr>
-                <th className="px-3 py-4 w-10">
-                  <button onClick={toggleSelectAll} className="text-slate-400 hover:text-indigo-600">
-                    {selectedIds.size === filteredAndSorted.length && filteredAndSorted.length > 0
-                      ? <CheckSquare className="w-4 h-4 text-indigo-600" />
-                      : <Square className="w-4 h-4" />
-                    }
-                  </button>
-                </th>
+                {isAdmin && (
+                  <th className="px-3 py-4 w-10">
+                    <button onClick={toggleSelectAll} className="text-slate-400 hover:text-indigo-600">
+                      {selectedIds.size === filteredAndSorted.length && filteredAndSorted.length > 0
+                        ? <CheckSquare className="w-4 h-4 text-indigo-600" />
+                        : <Square className="w-4 h-4" />
+                      }
+                    </button>
+                  </th>
+                )}
                 <th className="px-6 py-4 cursor-pointer select-none group/th" onClick={() => handleSort('name')}>
                   <div className="flex items-center gap-1">{t.name} <SortIcon field="name" /></div>
                 </th>
@@ -372,7 +375,7 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
                   <div className="flex items-center justify-center gap-1">{t.publications} <SortIcon field="publications" /></div>
                 </th>
                 <th className="px-6 py-4 text-center">{t.sources}</th>
-                <th className="px-6 py-4 text-right">{t.actions}</th>
+                {isAdmin && <th className="px-6 py-4 text-right">{t.actions}</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -384,14 +387,16 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
 
                 return (
                   <tr key={faculty.orcidId} className={`hover:bg-slate-50 transition-colors group ${selectedIds.has(faculty.orcidId) ? 'bg-indigo-50/50' : ''}`}>
-                    <td className="px-3 py-4 w-10">
-                      <button onClick={() => toggleSelect(faculty.orcidId)} className="text-slate-400 hover:text-indigo-600">
-                        {selectedIds.has(faculty.orcidId)
-                          ? <CheckSquare className="w-4 h-4 text-indigo-600" />
-                          : <Square className="w-4 h-4" />
-                        }
-                      </button>
-                    </td>
+                    {isAdmin && (
+                      <td className="px-3 py-4 w-10">
+                        <button onClick={() => toggleSelect(faculty.orcidId)} className="text-slate-400 hover:text-indigo-600">
+                          {selectedIds.has(faculty.orcidId)
+                            ? <CheckSquare className="w-4 h-4 text-indigo-600" />
+                            : <Square className="w-4 h-4" />
+                          }
+                        </button>
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
@@ -452,43 +457,45 @@ const FacultyList: React.FC<FacultyListProps> = ({ facultyList, onSelect, onDele
                       </div>
                     </td>
 
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => onSelect(faculty)}
-                          className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-md"
-                          title={t.viewProfile}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-                        {onEdit && (
+                    {isAdmin && (
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => onEdit(faculty)}
-                            className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-md"
-                            title={t.editFaculty}
+                            onClick={() => onSelect(faculty)}
+                            className="p-1.5 hover:bg-blue-50 text-blue-600 rounded-md"
+                            title={t.viewProfile}
                           >
-                            <Pencil className="w-4 h-4" />
+                            <ExternalLink className="w-4 h-4" />
                           </button>
-                        )}
-                        {onRefresh && (
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(faculty)}
+                              className="p-1.5 hover:bg-amber-50 text-amber-600 rounded-md"
+                              title={t.editFaculty}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                          )}
+                          {onRefresh && (
+                            <button
+                              onClick={() => handleRefresh(faculty.orcidId)}
+                              disabled={isRefreshing}
+                              className="p-1.5 hover:bg-green-50 text-green-600 rounded-md disabled:opacity-50"
+                              title={t.refreshData}
+                            >
+                              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            </button>
+                          )}
                           <button
-                            onClick={() => handleRefresh(faculty.orcidId)}
-                            disabled={isRefreshing}
-                            className="p-1.5 hover:bg-green-50 text-green-600 rounded-md disabled:opacity-50"
-                            title={t.refreshData}
+                            onClick={() => onDelete(faculty.orcidId)}
+                            className="p-1.5 hover:bg-red-50 text-red-600 rounded-md"
+                            title="Remove"
                           >
-                            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            <Trash2 className="w-4 h-4" />
                           </button>
-                        )}
-                        <button
-                          onClick={() => onDelete(faculty.orcidId)}
-                          className="p-1.5 hover:bg-red-50 text-red-600 rounded-md"
-                          title="Remove"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

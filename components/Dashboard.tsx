@@ -1,6 +1,6 @@
 
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Faculty } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { Users, FileText, TrendingUp, Award, BarChart2, Filter, Database, Globe, Calendar, Download } from 'lucide-react';
@@ -41,6 +41,17 @@ const Dashboard: React.FC<DashboardProps> = ({ facultyList, onSelectFaculty }) =
   const [selectedDept, setSelectedDept] = useState('All');
   const [selectedFacId, setSelectedFacId] = useState('All');
   const [startYear, setStartYear] = useState<number>(currentYear - 4);
+  const [startYearInitialized, setStartYearInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!startYearInitialized && facultyList.length > 0) {
+      const years = facultyList.flatMap(f => f.publications.map(p => p.year).filter(Boolean));
+      if (years.length > 0) {
+        setStartYear(Math.min(...years));
+        setStartYearInitialized(true);
+      }
+    }
+  }, [facultyList, startYearInitialized]);
   const [endYear, setEndYear] = useState<number>(currentYear);
 
   // Derive unique departments

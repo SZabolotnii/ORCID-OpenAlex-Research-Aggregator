@@ -1,8 +1,8 @@
 
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2, Save, FolderDown, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2, Save, FolderDown, FileSpreadsheet, Lock, LogOut, Shield, Eye } from 'lucide-react';
 import { Faculty, ApiKeys, DataSource, Publication } from './types';
 import { fetchOrcidData } from './services/orcidService';
 import { fetchOpenAlexMetrics } from './services/openAlexService';
@@ -36,11 +36,66 @@ const NavLink = ({ to, icon: Icon, label }: { to: string, icon: any, label: stri
   );
 };
 
+// Simple SHA-256 hash for password storage
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 function App() {
   const { t, language, setLanguage } = useLanguage();
   const [facultyList, setFacultyList] = useState<Faculty[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Admin mode
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [setPassError, setSetPassError] = useState('');
+
+  const hasAdminPassword = () => !!localStorage.getItem('admin_password_hash');
+
+  const handleAdminLogin = async () => {
+    const storedHash = localStorage.getItem('admin_password_hash');
+    if (!storedHash) {
+      // No password set — show set password form
+      setShowSetPassword(true);
+      setShowLoginModal(false);
+      return;
+    }
+    const inputHash = await hashPassword(loginPassword);
+    if (inputHash === storedHash) {
+      setIsAdmin(true);
+      setShowLoginModal(false);
+      setLoginPassword('');
+      setLoginError('');
+    } else {
+      setLoginError(t.wrongPassword);
+    }
+  };
+
+  const handleSetPassword = async () => {
+    if (newPass.length < 4) { setSetPassError(t.passwordTooShort); return; }
+    if (newPass !== confirmPass) { setSetPassError(t.passwordMismatch); return; }
+    const hash = await hashPassword(newPass);
+    localStorage.setItem('admin_password_hash', hash);
+    setIsAdmin(true);
+    setShowSetPassword(false);
+    setNewPass('');
+    setConfirmPass('');
+    setSetPassError('');
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+  };
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
   const [selectedPublication, setSelectedPublication] = useState<Publication | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeys>({ scopus: '', wos: '' });
@@ -70,6 +125,8 @@ function App() {
   const [batchRunning, setBatchRunning] = useState(false);
 
   // Persist data with safe parsing
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('faculty_data');
@@ -86,6 +143,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     localStorage.setItem('faculty_data', JSON.stringify(facultyList));
   }, [facultyList]);
 
@@ -365,7 +426,7 @@ function App() {
           <nav className="flex-1 p-4 space-y-2">
             <NavLink to="/" icon={LayoutDashboard} label={t.dashboard} />
             <NavLink to="/faculty" icon={Users} label={t.facultyList} />
-            <NavLink to="/search" icon={Search} label={t.searchMenu} />
+            {isAdmin && <NavLink to="/search" icon={Search} label={t.searchMenu} />}
             <NavLink to="/chat" icon={MessageSquareText} label={t.aiAssistant} />
             <NavLink to="/reports" icon={FileBarChart} label={t.reports} />
           </nav>
@@ -391,40 +452,71 @@ function App() {
                 </button>
              </div>
 
-             {/* Data Management */}
-             {facultyList.length > 0 && (
-               <div className="space-y-1">
-                 <button
-                   onClick={handleSaveJSON}
-                   className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
-                 >
-                   <Save size={16} />
-                   {t.saveData}
-                 </button>
-                 <button
-                   onClick={handleExportFullCSV}
-                   className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
-                 >
-                   <FileSpreadsheet size={16} />
-                   {t.exportFullCSV}
-                 </button>
-               </div>
+             {/* Admin/User mode toggle */}
+             {isAdmin ? (
+               <button
+                 onClick={handleAdminLogout}
+                 className="w-full flex items-center gap-2 p-2 rounded-lg text-amber-700 bg-amber-50 hover:bg-amber-100 text-sm font-medium transition-colors border border-amber-200"
+               >
+                 <Shield size={16} />
+                 {t.adminMode}
+                 <LogOut size={14} className="ml-auto" />
+               </button>
+             ) : (
+               <button
+                 onClick={() => {
+                   if (!hasAdminPassword()) {
+                     setShowSetPassword(true);
+                   } else {
+                     setShowLoginModal(true);
+                   }
+                 }}
+                 className="w-full flex items-center gap-2 p-2 rounded-lg text-slate-500 hover:bg-slate-100 text-sm transition-colors"
+               >
+                 <Eye size={16} />
+                 {t.userMode}
+                 <Lock size={14} className="ml-auto" />
+               </button>
              )}
-             <button
-               onClick={handleLoadJSON}
-               className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
-             >
-               <FolderDown size={16} />
-               {t.loadData}
-             </button>
 
-             <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
-             >
-                <Settings size={16} />
-                {t.settings}
-             </button>
+             {/* Data Management — admin only */}
+             {isAdmin && (
+               <>
+                 {facultyList.length > 0 && (
+                   <div className="space-y-1">
+                     <button
+                       onClick={handleSaveJSON}
+                       className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+                     >
+                       <Save size={16} />
+                       {t.saveData}
+                     </button>
+                     <button
+                       onClick={handleExportFullCSV}
+                       className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+                     >
+                       <FileSpreadsheet size={16} />
+                       {t.exportFullCSV}
+                     </button>
+                   </div>
+                 )}
+                 <button
+                   onClick={handleLoadJSON}
+                   className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+                 >
+                   <FolderDown size={16} />
+                   {t.loadData}
+                 </button>
+
+                 <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="w-full text-left flex items-center gap-2 p-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm transition-colors"
+                 >
+                    <Settings size={16} />
+                    {t.settings}
+                 </button>
+               </>
+             )}
 
              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                  <h4 className="font-semibold text-slate-800 text-sm mb-1">{t.mvpVersion}</h4>
@@ -446,28 +538,32 @@ function App() {
                 <Globe size={20} />
               </button>
 
-              <button
-                onClick={() => setIsBatchImporting(true)}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
-              >
-                <Upload size={18} />
-                {t.batchImport}
-              </button>
-              <button
-                onClick={() => setIsAdding(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
-              >
-                <Plus size={18} />
-                {t.addFaculty}
-              </button>
+              {isAdmin && (
+                <>
+                  <button
+                    onClick={() => setIsBatchImporting(true)}
+                    className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-all"
+                  >
+                    <Upload size={18} />
+                    {t.batchImport}
+                  </button>
+                  <button
+                    onClick={() => setIsAdding(true)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
+                  >
+                    <Plus size={18} />
+                    {t.addFaculty}
+                  </button>
+                </>
+              )}
             </div>
           </header>
 
           <div className="p-8 max-w-7xl mx-auto w-full">
             <Routes>
               <Route path="/" element={<Dashboard facultyList={facultyList} onSelectFaculty={setSelectedFaculty} />} />
-              <Route 
-                path="/faculty" 
+              <Route
+                path="/faculty"
                 element={
                   <FacultyList
                     facultyList={facultyList}
@@ -477,8 +573,9 @@ function App() {
                     onEdit={handleEditFaculty}
                     onBulkDelete={handleBulkDelete}
                     onBulkUpdate={handleBulkUpdate}
+                    isAdmin={isAdmin}
                   />
-                } 
+                }
               />
               <Route 
                 path="/search" 
@@ -794,10 +891,111 @@ function App() {
 
         {/* Publication Details Modal */}
         {selectedPublication && (
-            <PublicationDetailsModal 
-                publication={selectedPublication} 
-                onClose={() => setSelectedPublication(null)} 
+            <PublicationDetailsModal
+                publication={selectedPublication}
+                onClose={() => setSelectedPublication(null)}
             />
+        )}
+
+        {/* Admin Login Modal */}
+        {showLoginModal && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Lock size={18} className="text-indigo-600" /> {t.loginAdmin}</h3>
+                <button onClick={() => { setShowLoginModal(false); setLoginPassword(''); setLoginError(''); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.password}</label>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => { setLoginPassword(e.target.value); setLoginError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
+                    placeholder={t.enterPassword}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    autoFocus
+                  />
+                </div>
+                {loginError && (
+                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">{loginError}</div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowLoginModal(false); setLoginPassword(''); setLoginError(''); }}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors"
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    onClick={handleAdminLogin}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                  >
+                    {t.login}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Set Password Modal */}
+        {showSetPassword && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Shield size={18} className="text-indigo-600" /> {t.setPassword}</h3>
+                <button onClick={() => { setShowSetPassword(false); setNewPass(''); setConfirmPass(''); setSetPassError(''); }} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                  {t.readOnlyMode}
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.newPassword}</label>
+                  <input
+                    type="password"
+                    value={newPass}
+                    onChange={(e) => { setNewPass(e.target.value); setSetPassError(''); }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.confirmPassword}</label>
+                  <input
+                    type="password"
+                    value={confirmPass}
+                    onChange={(e) => { setConfirmPass(e.target.value); setSetPassError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
+                {setPassError && (
+                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">{setPassError}</div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowSetPassword(false); setNewPass(''); setConfirmPass(''); setSetPassError(''); }}
+                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors"
+                  >
+                    {t.cancel}
+                  </button>
+                  <button
+                    onClick={handleSetPassword}
+                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                  >
+                    {t.setPassword}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </Router>

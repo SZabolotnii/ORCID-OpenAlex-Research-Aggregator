@@ -52,12 +52,22 @@ export const fetchOpenAlexMetrics = async (orcidId: string): Promise<OpenAlexMet
       }));
     }
 
+    // cited_by_count and works_count live at the top level, not inside summary_stats
+    const citationCount = authorData.cited_by_count || 0;
+    const worksCount = authorData.works_count || 0;
+
+    // Calculate 2-year citation count from counts_by_year since summary_stats only has 2yr_mean_citedness
+    const currentYear = new Date().getFullYear();
+    const citationCount2Year = (authorData.counts_by_year || [])
+      .filter((y: any) => y.year >= currentYear - 1)
+      .reduce((sum: number, y: any) => sum + (y.cited_by_count || 0), 0);
+
     return {
       hIndex: stats.h_index || 0,
       i10Index: stats.i10_index || 0,
-      citationCount: stats.cited_by_count || 0,
-      worksCount: stats.works_count || 0,
-      citationCount2Year: stats['2yr_cited_by_count'] || 0,
+      citationCount,
+      worksCount,
+      citationCount2Year,
       lastUpdated: new Date().toISOString(),
       topics,
       yearlyStats,
@@ -108,9 +118,18 @@ export const getAuthorStatsRaw = async (orcidId: string) => {
    // Return a compact version for the LLM to consume tokens efficiently
    return {
      h_index: data.hIndex,
+     i10_index: data.i10Index,
+     works_count: data.worksCount,
      citations_total: data.citationCount,
      citations_2y: data.citationCount2Year,
      top_topics: data.topics.map(t => t.name),
-     yearly_trend: data.yearlyStats.slice(-5) // Last 5 years
+     yearly_trend: data.yearlyStats.slice(-5),
+     top_works: data.topWorks.slice(0, 5).map(w => ({
+       title: w.title,
+       year: w.year,
+       citations: w.citations,
+       journal: w.journal,
+       doi: w.doi
+     }))
    };
 };
