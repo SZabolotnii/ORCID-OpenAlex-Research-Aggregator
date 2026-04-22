@@ -1,119 +1,43 @@
 
-import { GoogleGenAI, Content, Part } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 import { Faculty, ChatMessage } from "../types";
-import { mcpTools, executeMcpTool } from "./mcpProcessor";
 
-// Helper to get fresh AI instance
+// Helper to get fresh AI instance (used for reports only)
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+// API base URL — proxied in dev via vite, direct in production
+const API_BASE = '/api';
+
 /**
- * Pro Analysis with MCP (Function Calling).
- * This function enables the "Agent" mode where Gemini can decide to fetch external data 
- * from OpenAlex via our embedded tools before answering.
+ * AI Chat via pi-agent backend.
+ * Sends faculty data and query to the server-side agent which has
+ * full access to local data tools + external OpenAlex tools.
  */
 export const analyzeFacultyData = async (
-  facultyList: Faculty[], 
-  query: string, 
+  facultyList: Faculty[],
+  query: string,
   history: ChatMessage[],
   lang: 'en' | 'ua'
 ): Promise<string> => {
-  const ai = getAI();
-  const langInstruction = lang === 'ua' ? 'Ukrainian' : 'English';
-
-  // 1. Create a "Directory" of available faculty
-  // This tells the LLM which ORCID IDs are available in the local context so it can call get_author_metrics correctly.
-  const facultyDirectory = facultyList.map(f => `- ${f.name} (ORCID: ${f.orcidId}, Dept: ${f.department})`).join('\n');
-
-  // 2. Initial Prompt with System Instruction
-  const systemInstruction = `
-    You are a Research Intelligence Agent powered by OpenAlex data.
-    You have access to a specific list of local faculty members and a set of tools to fetch their deep metrics.
-    
-    LOCAL FACULTY DIRECTORY:
-    ${facultyDirectory}
-
-    RULES:
-    1. If the user asks about a specific faculty member, ALWAYS check if you need to call 'get_author_metrics' to get their latest H-index or trends.
-    2. If the user asks about general trends (e.g. "What is trending in AI?"), use 'search_scientific_works'.
-    3. Provide the final response strictly in ${langInstruction}.
-    4. Be professional, concise, and data-driven.
-  `;
-
-  // 3. Initialize Chat History
-  // Convert existing chat history (excluding welcome message) to Gemini Content format
-  const historyContents: Content[] = history
-    .filter(msg => msg.id !== 'welcome') // Skip the static welcome message
-    .map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
-
-  // We use a manual content array to manage the function call loop, prepending history
-  let contents: Content[] = [
-    ...historyContents,
-    { role: 'user', parts: [{ text: query }] }
-  ];
-
   try {
-    const model = ai.models;
-    const modelId = 'gemini-2.5-flash'; // Using Flash for speed in tool loops, or 'gemini-3-pro-preview' for intelligence
-    
-    // --- Tool Loop ---
-    // We allow up to 5 turns to prevent infinite loops
-    for (let turn = 0; turn < 5; turn++) {
-        
-        // A. Generate content with tools
-        const response = await model.generateContent({
-            model: modelId,
-            contents: contents,
-            config: {
-                tools: mcpTools,
-                systemInstruction: systemInstruction
-            }
-        });
+    const response = await fetch(`${API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, facultyList, history, lang }),
+    });
 
-        const responseContent = response.candidates?.[0]?.content;
-        if (!responseContent) throw new Error("No response content");
-
-        // Append model's response to history
-        contents.push(responseContent);
-
-        // B. Check for Function Calls
-        // FIX: Access as property, not function call
-        const functionCalls = response.functionCalls;
-        
-        if (functionCalls && functionCalls.length > 0) {
-            // C. Execute Tools
-            const functionResponses: Part[] = [];
-            
-            for (const call of functionCalls) {
-                const result = await executeMcpTool(call.name, call.args);
-                
-                functionResponses.push({
-                    functionResponse: {
-                        name: call.name,
-                        id: call.id, // Important: match the ID
-                        response: { result: result }
-                    }
-                });
-            }
-
-            // D. Append Tool Results to history
-            contents.push({ role: 'tool', parts: functionResponses });
-            // Continue loop -> Model sees tool output and decides what to do next
-        } else {
-            // No function calls -> This is the final answer
-            return response.text || "";
-        }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
     }
 
-    return lang === 'ua' ? "Перевищено ліміт запитів до інструментів." : "Tool execution limit exceeded.";
-
-  } catch (error) {
-    console.error("Gemini Agent Error:", error);
-    return lang === 'ua' 
-      ? "Виникла помилка під час роботи Агента. Спробуйте пізніше." 
-      : "I encountered an error while running the analysis agent.";
+    const data = await response.json();
+    return data.response || '';
+  } catch (error: any) {
+    console.error("Agent API Error:", error);
+    return lang === 'ua'
+      ? `Помилка з'єднання з AI-агентом: ${error.message}`
+      : `Agent connection error: ${error.message}`;
   }
 };
 

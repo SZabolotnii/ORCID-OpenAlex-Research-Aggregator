@@ -3,341 +3,221 @@
 
 # ResearchIQ: AI-Powered Academic Analytics
 
-[![Built with Gemini 3 Pro](https://img.shields.io/badge/Gemini-3%20Pro-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
-[![Google AI Studio](https://img.shields.io/badge/Google-AI%20Studio-34A853?logo=google&logoColor=white)](https://aistudio.google.com/)
+[![Built with Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![pi-agent](https://img.shields.io/badge/pi--agent-0.68-purple)](https://github.com/badlogic/pi-mono)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**From 10-year vision to 5-hour reality** — Transform 40-hour ministry reports into 3-minute automated workflows.
+**Multi-tenant research analytics platform** for university administrators.  
+Aggregate faculty data from ORCID + OpenAlex, analyze with AI, generate ministry reports.
 
-[**Try Live Demo**](https://ai.studio/apps/drive/19AjMK36QQLJtvxnx-Eq_49RxRRGKgtD2) · [Watch Video](#) · [Read Paper](#) · [Report Bug](#)
+[**Live Demo**](https://orcid-csbc.szabolotnii.site) · [Report Bug](https://github.com/SZabolotnii/ORCID-OpenAlex-Research-Aggregator/issues)
 
 </div>
 
 ---
 
-## 📖 Problem Statement
+## Problem
 
-**2015.** [Vice-Rector for Scientific Research](https://www.linkedin.com/in/serhii-zabolotnii-45a95432/) at Cherkasy State Technological University, Ukraine.
+University administrators spend **40+ hours monthly** compiling research reports for accreditation and ministry requirements. Data is fragmented across ORCID, Scopus, Google Scholar, and institutional databases with manual copy-paste leading to errors.
 
-The challenge:
-- **40+ hours monthly** compiling reports for Ministry of Education
-- Data **fragmented** across ORCID, Scopus, Google Scholar, institutional databases
-- **Manual copying** led to 23±5% error rate (MOE audit, 2023)
-- **Outdated information** due to time-intensive processes
-- **No strategic insights** — only reactive reporting
+## Solution
 
-The vision: *Automated multi-source integration with intelligent report generation.*
+ResearchIQ automates the entire workflow:
 
----
-
-## ✨ Solution: ResearchIQ
-
-**2025.** Gemini 3 Pro + Google AI Studio Vibe Coding transformed the decade-old vision into production-ready system **in 5 hours.**
-
-### Core Capabilities
-
-#### 🤖 Autonomous AI Agent
-- **MCP Function Calling:** Gemini autonomously queries OpenAlex API
-- Query *"Who published most in 2024?"* → `get_author_metrics()` executes automatically
-- **Zero explicit programming** for API integration
-
-#### 📄 Universal Template Intelligence
-- Upload **any format** (.docx, .xlsx, .pdf, .csv, .md)
-- Gemini **extracts structure** and maps fields to faculty data
-- Generates **formatted outputs** preserving original styling
-- Tested with 50+ ministry form templates
-
-#### 🔗 Multi-Source Data Fusion
-- **Aggregates:** ORCID + OpenAlex + Scopus + Web of Science
-- **DOI/Title matching** eliminates duplicates (100% accuracy on test dataset)
-- **Source provenance** tracking with visual badges
-- **Conflict resolution** algorithm prioritizes DOI > Title+Year
-
-#### 💬 Conversational Analytics
-- Natural language queries against institutional research data
-- **1M token context** for comprehensive analysis
-- Real-time dashboard updates
-- Bilingual interface (English/Ukrainian)
+1. **Import** faculty via CSV with ORCID IDs
+2. **Aggregate** publications and metrics from ORCID + OpenAlex
+3. **Analyze** with AI agent that has full access to institutional data
+4. **Generate** standardized reports from templates
 
 ---
 
-## 🏗️ Technical Architecture
+## Architecture
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Frontend (React 19)                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  Dashboard   │  │ Faculty List │  │ AI Assistant │   │
-│  └──────────────┘  └──────────────┘  └──────────────┘   │
-│  ┌──────────────┐  ┌──────────────┐                     │
-│  │ ORCID Search │  │ Report Gen   │                     │
-│  └──────────────┘  └──────────────┘                     │
-└─────────────────────────────────────────────────────────┘
-                          ↕️
-┌─────────────────────────────────────────────────────────┐
-│              Gemini 3 Pro API (MCP Tools)               │
-│  ┌──────────────────┐  ┌──────────────────────────┐     │
-│  │ get_author_      │  │ search_scientific_       │     │
-│  │ metrics()        │  │ works()                  │     │
-│  └──────────────────┘  └──────────────────────────┘     │
-└─────────────────────────────────────────────────────────┘
-                          ↕️
-┌─────────────────────────────────────────────────────────┐
-│                   Data Sources                          │
-│  ┌────────┐  ┌──────────┐  ┌────────┐  ┌──────────┐     │
-│  │ ORCID  │  │ OpenAlex │  │ Scopus │  │   WoS    │     │
-│  └────────┘  └──────────┘  └────────┘  └──────────┘     │
-└─────────────────────────────────────────────────────────┘
+Browser (React SPA)
+  ↕ /api/*
+VPS Backend (Node.js + pi-agent-core)
+  ├── AI Agent (Gemini 2.5 Flash + 7 research tools)
+  ├── Multi-tenant data storage (per-subdomain)
+  └── Server-side auth (admin/viewer modes)
+  ↕
+External APIs: ORCID, OpenAlex
 ```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **AI Research Assistant** | 7 tools: faculty rankings, publication search, department comparison, faculty detail, live OpenAlex metrics, global search, date |
+| **Multi-tenant** | Each institution gets `orcid-{id}.szabolotnii.site` with separate data and access control |
+| **Admin/Viewer modes** | Admin: full CRUD, import/export, settings. Viewer: read-only dashboard + AI + reports |
+| **Batch Import** | CSV import with automatic ORCID + OpenAlex data fetching |
+| **Report Generator** | Standard reports (Scopus/WoS, faculty card, accreditation) + custom template filling |
+| **Bilingual** | English / Ukrainian interface |
 
 ### Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React 19, TypeScript, Vite, TailwindCSS |
-| **AI Engine** | Gemini 3 Pro API, MCP Protocol |
-| **Data Processing** | mammoth.js, PDF.js, SheetJS, PapaParse |
-| **Visualization** | Recharts, Lucide Icons |
-| **State Management** | React Hooks, Context API |
-| **Routing** | React Router v7 |
+| **Frontend** | React 19, TypeScript, Vite, TailwindCSS, Recharts |
+| **Backend** | Node.js, Express, pi-agent-core, pi-ai (Gemini) |
+| **Data Sources** | ORCID Public API, OpenAlex API |
+| **Deployment** | VPS, PM2, Caddy (reverse proxy + SSL) |
 
 ---
 
-## 📊 Potential Impact
-
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| **Report Compilation** | 40 hours | 3 minutes | **93% reduction** |
-| **Development Time** | 10 years vision | 5 hours build | **~17,520x faster** |
-| **Error Rate** | 23% (manual) | 0.2% (automated) | **99.1% improvement** |
-| **Cost Savings** | — | $12,000+/year | Per mid-size dept |
-| **Data Sources** | 1-2 (manual) | 4 (automated) | **4x coverage** |
-
-**MVP Deployment:** Cherkasy State Business College, Ukraine (December 2025)  
-**Validated Dataset:** 347 publications, 23 faculty members
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- **Node.js** 18+ ([Download](https://nodejs.org/))
-- **Gemini API Key** ([Get Free Key](https://aistudio.google.com/))
+- **Node.js** 20+ ([Download](https://nodejs.org/))
+- **Gemini API Key** ([Get Free Key](https://aistudio.google.com/apikey))
 
-### Installation
+### Local Development
+
 ```bash
-# 1. Clone repository
-git clone https://github.com/yourusername/researchiq.git
-cd researchiq
+# 1. Clone
+git clone https://github.com/SZabolotnii/ORCID-OpenAlex-Research-Aggregator.git
+cd ORCID-OpenAlex-Research-Aggregator
 
-# 2. Install dependencies
+# 2. Frontend
 npm install
 
-# 3. Configure environment
-cp .env.example .env.local
-# Edit .env.local and add your GEMINI_API_KEY
+# 3. Backend
+cd server && npm install && cd ..
 
-# 4. Start development server
+# 4. Configure
+echo "GEMINI_API_KEY=your_key_here" > .env
+echo "GEMINI_API_KEY=your_key_here" > server/.env
+
+# 5. Start both servers
+cd server && npm run dev &
 npm run dev
 ```
 
-**Access:** Open [http://localhost:3000](http://localhost:3000)
+Frontend: [http://localhost:3000](http://localhost:3000) (proxies `/api` to backend at :3001)
 
-### Environment Variables
+### Import Faculty Data
+
 ```bash
-# .env.local
-GEMINI_API_KEY=your_api_key_here
+# From CSV file (one ORCID per line, optional: department, position columns)
+npx tsx scripts/import-csv.ts faculty.csv \
+  --tenant csbc \
+  --institution "University Name" \
+  --output backup.json
 
-# Optional: External API keys for enhanced features
-SCOPUS_API_KEY=your_scopus_key  # For Scopus data
-WOS_API_KEY=your_wos_key        # For Web of Science data
+# Options:
+#   --site <url>          Target site (default: https://orcid-tracker.szabolotnii.site)
+#   --tenant <id>         Tenant ID (default: "default")
+#   --institution <name>  Default institution name
+#   --department <name>   Default department
+#   --position <name>     Default position (default: Associate Professor)
+#   --output <file>       Also save JSON locally
+#   --dry-run             Fetch data without uploading
 ```
 
 ---
 
-## 💻 Usage
+## Project Structure
 
-### 1. Add Faculty Member
-```bash
-Dashboard → "Add Faculty" → Enter ORCID ID (e.g., 0000-0003-0242-2234)
-→ System automatically fetches and merges data from 4 sources
-```
-
-### 2. Search by Institution
-```bash
-Search ORCID → Type "Cherkasy State Business College" 
-→ Discover 20+ researchers → Add to tracker with one click
-```
-
-### 3. Ask AI Assistant
-```bash
-AI Assistant → "What are the publication trends for 2024?"
-→ Gemini autonomously queries OpenAlex API
-→ Synthesized response with citations
-```
-
-### 4. Generate Reports
-
-#### Standard Reports
-```bash
-Reports → Select report type (Annual/Department/Individual)
-→ Choose filters → "Generate Report"
-```
-
-#### Custom Templates
-```bash
-Reports → Custom Templates → Upload .docx ministry form
-→ Add instructions (optional) → "Fill Template"
-→ Download completed report
-```
-
----
-
-## 🌐 Live Demo
-
-**🔗 Try the app:** [https://ai.studio/apps/drive/19AjMK36QQLJtvxnx-Eq_49RxRRGKgtD2](https://ai.studio/apps/drive/19AjMK36QQLJtvxnx-Eq_49RxRRGKgtD2)
-
-**Features in demo:**
-- ✅ Add faculty via ORCID
-- ✅ Multi-source data aggregation
-- ✅ AI conversational analytics
-- ✅ Template-based report generation
-- ✅ Interactive dashboards with filters
-
----
-
-## 📁 Project Structure
 ```
 researchiq/
-├── public/              # Static assets
-├── src/
-│   ├── components/      # React components
-│   │   ├── Dashboard.tsx
-│   │   ├── FacultyList.tsx
-│   │   ├── ChatInterface.tsx
-│   │   ├── ReportGenerator.tsx
-│   │   └── OrcidSearch.tsx
-│   ├── services/        # API integration
-│   │   ├── geminiService.ts      # Gemini 3 Pro API
-│   │   ├── orcidService.ts       # ORCID Public API
-│   │   ├── openAlexService.ts    # OpenAlex API
-│   │   ├── mcpProcessor.ts       # MCP function calling
-│   │   └── dataMergeService.ts   # Multi-source fusion
-│   ├── contexts/        # React contexts
-│   ├── types.ts         # TypeScript definitions
-│   └── App.tsx          # Main application
-├── .env.local           # Environment variables
-├── package.json         # Dependencies
-├── vite.config.ts       # Vite configuration
-└── README.md            # This file
+├── App.tsx                  # Main app: routing, state, admin/viewer modes, tenant detection
+├── components/
+│   ├── Dashboard.tsx        # Analytics dashboard with charts and filters
+│   ├── FacultyList.tsx      # Faculty table (admin: edit/delete, viewer: read-only)
+│   ├── ChatInterface.tsx    # AI assistant UI
+│   ├── ReportGenerator.tsx  # Report generation with template upload
+│   ├── OrcidSearch.tsx      # ORCID affiliation search (admin only)
+│   └── ProfileModal.tsx     # Faculty detail view
+├── services/
+│   ├── geminiService.ts     # Chat → /api/chat backend; Reports → direct Gemini
+│   ├── orcidService.ts      # ORCID Public API
+│   ├── openAlexService.ts   # OpenAlex API (metrics, works)
+│   └── dataMergeService.ts  # Publication deduplication
+├── server/                  # Backend (separate package)
+│   └── src/
+│       ├── index.ts         # Express API: tenants, data, chat
+│       ├── agent.ts         # pi-agent config, system prompt, context builder
+│       ├── tools.ts         # 7 research tool implementations
+│       └── types.ts         # Shared types
+├── scripts/
+│   └── import-csv.ts        # CLI data import tool
+├── contexts/                # LanguageContext (EN/UA)
+├── utils/translations.ts    # Bilingual translations
+├── types.ts                 # Frontend TypeScript types
+└── vite.config.ts           # Vite config with /api proxy
 ```
 
 ---
 
-## 🛠️ Development
+## Multi-tenant Setup
 
-### Build for Production
+Each institution gets a subdomain following the pattern `orcid-{id}.szabolotnii.site`:
+
 ```bash
+# 1. Add DNS A-record: orcid-{id}.szabolotnii.site → VPS IP
+# 2. Add subdomain to Caddy config
+# 3. Import data:
+npx tsx scripts/import-csv.ts faculty.csv --tenant {id} --institution "Name"
+```
+
+Tenant configuration stored in `data/tenants.json`:
+```json
+[{
+  "id": "csbc",
+  "subdomain": "orcid-csbc",
+  "name": "Cherkasy State Business College",
+  "public": true,
+  "adminPasswordHash": ""
+}]
+```
+
+- `public: true` — dashboard visible to everyone, admin mode requires password
+- `public: false` — entire dashboard requires password to view
+
+---
+
+## Deployment
+
+### VPS Deployment (Current)
+
+```bash
+# Backend
+scp -r server/src/* root@server:/opt/orcid-tracker-api/src/
+ssh root@server "cd /opt/orcid-tracker-api && npx tsc && pm2 restart orcid-api"
+
+# Frontend
 npm run build
-# Output: dist/ folder ready for deployment
+scp -r dist/* root@server:/var/www/orcid-tracker/
 ```
 
-### Deployment Options
+### Caddy Configuration
 
-#### Option 1: Google AI Studio (Recommended)
-```bash
-# Already deployed at:
-https://ai.studio/apps/drive/19AjMK36QQLJtvxnx-Eq_49RxRRGKgtD2
-```
-
-#### Option 2: Vercel
-```bash
-npm install -g vercel
-vercel --prod
-```
-
-#### Option 3: Netlify
-```bash
-npm run build
-# Drag dist/ folder to https://app.netlify.com/drop
+```caddyfile
+orcid-tracker.szabolotnii.site, orcid-csbc.szabolotnii.site {
+  handle /api/* {
+    reverse_proxy 172.18.0.1:3001
+  }
+  handle {
+    reverse_proxy orcid-tracker:80
+  }
+}
 ```
 
 ---
 
-## 🤝 Contributing
+## License
 
-Contributions welcome! Please follow these steps:
-
-1. **Fork** the repository
-2. **Create** feature branch (`git checkout -b feature/AmazingFeature`)
-3. **Commit** changes (`git commit -m 'Add AmazingFeature'`)
-4. **Push** to branch (`git push origin feature/AmazingFeature`)
-5. **Open** Pull Request
-
-### Development Guidelines
-
-- Follow existing code style (Prettier + ESLint)
-- Add TypeScript types for new features
-- Update documentation for API changes
-- Test with multiple ORCID profiles before PR
+MIT License - see [LICENSE](LICENSE) file.
 
 ---
 
-## 📝 Roadmap
-
-- [x] Multi-source data aggregation (ORCID, OpenAlex, Scopus, WoS)
-- [x] MCP function calling agent
-- [x] Universal template intelligence
-- [x] Bilingual interface (EN/UA)
-- [ ] PostgreSQL backend integration
-- [ ] Institutional SSO authentication
-- [ ] Automated email reports
-- [ ] Mobile application (React Native)
-- [ ] RESTful API for third-party integrations
-- [ ] Docker containerization
-
----
-
-## 🏆 Recognition
-
-- **Built for:** [Vibe Coding with Gemini 3 Pro Hackathon](https://www.kaggle.com/competitions/gemini-3-pro-hackathon)
-- **Development Time:** 5 hours (Google AI Studio Vibe Coding)
-- **Impact:** 93% time reduction, $12K+ annual savings
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see [LICENSE](LICENSE) file for details.
-
----
-
-## 🙏 Acknowledgments
-
-- **Google AI Studio** for Vibe Coding platform
-- **Gemini 3 Pro** for autonomous AI capabilities
-- **ORCID** for open researcher identifiers
-- **OpenAlex** for free bibliometric data
-- **Cherkasy State Business College** for production testing
-
----
-
-## 📧 Contact
+## Contact
 
 **Serhii Zabolotnii**  
-Professor, Cherkasy State Business College  
-Former Vice-Rector for Scientific Research, Cherkasy State Technological University
+Professor, Cherkasy State Business College
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?logo=linkedin)](https://www.linkedin.com/in/serhii-zabolotnii-45a95432/)
-[![Email](https://img.shields.io/badge/Email-Contact-D14836?logo=gmail&logoColor=white)](mailto:your.email@example.com)
-
----
-
-<div align="center">
-
-**⭐ Star this repo if ResearchIQ helped your research administration!**
-
-Built with ❤️ using [Google AI Studio](https://aistudio.google.com/) | Powered by [Gemini 3 Pro](https://ai.google.dev/)
-
-</div>

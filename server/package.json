@@ -1,0 +1,24 @@
+{
+  "name": "researchiq-agent-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env dist/index.js",
+    "dev": "tsx watch --env-file=.env src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@mariozechner/pi-agent-core": "^0.68.0",
+    "@mariozechner/pi-ai": "^0.68.0",
+    "@sinclair/typebox": "^0.34.0",
+    "express": "^5.1.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

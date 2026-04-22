@@ -36,19 +36,34 @@ const NavLink = ({ to, icon: Icon, label }: { to: string, icon: any, label: stri
   );
 };
 
-// Simple SHA-256 hash for password storage
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+// Tenant detection from subdomain
+// orcid-csbc.szabolotnii.site → "csbc" (strip "orcid-" prefix)
+// orcid-tracker.szabolotnii.site → "default" (legacy)
+function getTenantId(): string {
+  const host = window.location.hostname;
+  const parts = host.split('.');
+  if (parts.length >= 3) {
+    const sub = parts[0];
+    if (sub === 'www' || sub === 'orcid-tracker') return 'default';
+    if (sub.startsWith('orcid-')) return sub.slice(6); // orcid-csbc → csbc
+    return sub;
+  }
+  return 'default';
 }
+
+const TENANT_ID = getTenantId();
 
 function App() {
   const { t, language, setLanguage } = useLanguage();
   const [facultyList, setFacultyList] = useState<Faculty[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // Tenant config
+  const [tenantName, setTenantName] = useState('');
+  const [tenantPublic, setTenantPublic] = useState(true);
+  const [tenantHasAdmin, setTenantHasAdmin] = useState(false);
+  const [tenantAuthorized, setTenantAuthorized] = useState(true); // true until proven private
 
   // Admin mode
   const [isAdmin, setIsAdmin] = useState(false);
@@ -59,38 +74,76 @@ function App() {
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [setPassError, setSetPassError] = useState('');
-
-  const hasAdminPassword = () => !!localStorage.getItem('admin_password_hash');
+  const [showViewPasswordModal, setShowViewPasswordModal] = useState(false);
+  const [viewPassword, setViewPassword] = useState('');
+  const [viewPasswordError, setViewPasswordError] = useState('');
 
   const handleAdminLogin = async () => {
-    const storedHash = localStorage.getItem('admin_password_hash');
-    if (!storedHash) {
-      // No password set — show set password form
+    if (!tenantHasAdmin) {
       setShowSetPassword(true);
       setShowLoginModal(false);
       return;
     }
-    const inputHash = await hashPassword(loginPassword);
-    if (inputHash === storedHash) {
-      setIsAdmin(true);
-      setShowLoginModal(false);
-      setLoginPassword('');
-      setLoginError('');
-    } else {
-      setLoginError(t.wrongPassword);
+    try {
+      const res = await fetch(`/api/tenant/${TENANT_ID}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: loginPassword }),
+      });
+      const data = await res.json();
+      if (data.role === 'admin') {
+        setIsAdmin(true);
+        setShowLoginModal(false);
+        setLoginPassword('');
+        setLoginError('');
+      } else {
+        setLoginError(t.wrongPassword);
+      }
+    } catch {
+      setLoginError('Connection error');
     }
   };
 
   const handleSetPassword = async () => {
     if (newPass.length < 4) { setSetPassError(t.passwordTooShort); return; }
     if (newPass !== confirmPass) { setSetPassError(t.passwordMismatch); return; }
-    const hash = await hashPassword(newPass);
-    localStorage.setItem('admin_password_hash', hash);
-    setIsAdmin(true);
-    setShowSetPassword(false);
-    setNewPass('');
-    setConfirmPass('');
-    setSetPassError('');
+    try {
+      await fetch(`/api/tenant/${TENANT_ID}/set-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminPassword: newPass }),
+      });
+      setIsAdmin(true);
+      setTenantHasAdmin(true);
+      setShowSetPassword(false);
+      setNewPass('');
+      setConfirmPass('');
+      setSetPassError('');
+    } catch {
+      setSetPassError('Connection error');
+    }
+  };
+
+  const handleViewPasswordSubmit = async () => {
+    try {
+      const res = await fetch(`/api/tenant/${TENANT_ID}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: viewPassword }),
+      });
+      const data = await res.json();
+      if (data.role === 'admin' || data.role === 'viewer') {
+        setTenantAuthorized(true);
+        setShowViewPasswordModal(false);
+        if (data.role === 'admin') setIsAdmin(true);
+        setViewPassword('');
+        setViewPasswordError('');
+      } else {
+        setViewPasswordError(t.wrongPassword);
+      }
+    } catch {
+      setViewPasswordError('Connection error');
+    }
   };
 
   const handleAdminLogout = () => {
@@ -128,26 +181,79 @@ function App() {
   const isInitialMount = useRef(true);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('faculty_data');
-      if (saved) {
-        setFacultyList(JSON.parse(saved));
+    const loadData = async () => {
+      try {
+        // 1. Load tenant config
+        const cfgRes = await fetch(`/api/tenant/${TENANT_ID}/config`);
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          setTenantName(cfg.name);
+          setTenantPublic(cfg.public);
+          setTenantHasAdmin(cfg.hasAdminPassword);
+          if (!cfg.public) {
+            // Private tenant — need password before showing data
+            setTenantAuthorized(false);
+            setShowViewPasswordModal(true);
+            return;
+          }
+        }
+
+        // 2. Try localStorage first (per-tenant key)
+        const storageKey = `faculty_data_${TENANT_ID}`;
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setFacultyList(parsed);
+            return;
+          }
+        }
+        // 3. Fallback: load from server
+        const res = await fetch(`/api/data/${TENANT_ID}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) {
+            setFacultyList(data);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load data", e);
       }
+    };
+    loadData();
+    try {
       const savedKeys = localStorage.getItem('api_keys');
       if (savedKeys) {
         setApiKeys(JSON.parse(savedKeys));
       }
     } catch (e) {
-      console.error("Failed to parse saved data", e);
+      console.error("Failed to parse API keys", e);
     }
   }, []);
+
+  // Load data after private tenant authorization
+  useEffect(() => {
+    if (!tenantAuthorized || tenantPublic) return;
+    const loadAfterAuth = async () => {
+      try {
+        const res = await fetch(`/api/data/${TENANT_ID}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0) setFacultyList(data);
+        }
+      } catch (e) {
+        console.error("Failed to load tenant data", e);
+      }
+    };
+    loadAfterAuth();
+  }, [tenantAuthorized, tenantPublic]);
 
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    localStorage.setItem('faculty_data', JSON.stringify(facultyList));
+    localStorage.setItem(`faculty_data_${TENANT_ID}`, JSON.stringify(facultyList));
   }, [facultyList]);
 
   const saveApiKeys = () => {
@@ -465,7 +571,7 @@ function App() {
              ) : (
                <button
                  onClick={() => {
-                   if (!hasAdminPassword()) {
+                   if (!tenantHasAdmin) {
                      setShowSetPassword(true);
                    } else {
                      setShowLoginModal(true);
@@ -528,7 +634,7 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 overflow-auto flex flex-col">
           <header className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-            <h2 className="text-lg font-semibold text-slate-700">{t.systemName}</h2>
+            <h2 className="text-lg font-semibold text-slate-700">{tenantName || t.systemName}</h2>
             <div className="flex items-center gap-4">
               {/* Mobile Lang Toggle */}
               <button 
@@ -993,6 +1099,42 @@ function App() {
                     {t.setPassword}
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* View Password Modal (private tenants) */}
+        {showViewPasswordModal && (
+          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Lock size={18} className="text-indigo-600" /> {tenantName || t.loginAdmin}</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-500 bg-amber-50 p-3 rounded-lg border border-amber-100">
+                  {t.readOnlyMode}
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.password}</label>
+                  <input
+                    type="password"
+                    value={viewPassword}
+                    onChange={(e) => { setViewPassword(e.target.value); setViewPasswordError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleViewPasswordSubmit()}
+                    placeholder={t.enterPassword}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                    autoFocus
+                  />
+                </div>
+                {viewPasswordError && (
+                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">{viewPasswordError}</div>
+                )}
+                <button
+                  onClick={handleViewPasswordSubmit}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
+                >
+                  {t.login}
+                </button>
               </div>
             </div>
           </div>

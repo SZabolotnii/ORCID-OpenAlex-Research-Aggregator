@@ -85,14 +85,15 @@ export const translations = {
 
     // Chat
     chatHeader: "Research Intelligence Assistant",
-    welcomeMessage: "Hello! I am your AI research assistant. I have access to your current faculty data including OpenAlex metrics (H-index, Citations) and research topics. Ask me about publication trends, identify gaps, or request summaries.",
-    welcomeMessageUA: "Привіт! Я ваш AI-асистент з досліджень. Я маю доступ до даних викладачів та метрик OpenAlex. Запитайте мене про тренди публікацій або попросіть створити звіт.",
-    inputPlaceholder: "Ask about trends, specific researchers, or generate summaries...",
+    welcomeMessage: "Hello! I am ResearchIQ — your intelligent research analytics assistant. I have **full access** to all your faculty data: publications, H-index, citations, Scopus/WoS indexing, and research topics. I can instantly compare departments, rank faculty, search publications by year or source, and analyze trends. Ask me anything!",
+    welcomeMessageUA: "Привіт! Я ResearchIQ — ваш інтелектуальний аналітичний асистент. Я маю **повний доступ** до всіх даних викладачів: публікації, h-index, цитування, індексація Scopus/WoS, наукові теми. Я можу миттєво порівнювати кафедри, ранжувати викладачів, шукати публікації за роком чи базою даних, аналізувати тренди. Запитуйте!",
+    inputPlaceholder: "Ask about rankings, publications, departments, or trends...",
     send: "Send",
     hints: [
-      "Find faculty with no pubs in 2024", 
-      "Who has the highest H-index?", 
-      "Compare department output"
+      "Who has the highest H-index?",
+      "Publications in 2025",
+      "Compare departments",
+      "Faculty summary table"
     ],
     errorMsg: "Sorry, I encountered an error while processing your request.",
     clearChat: "Clear Chat",
@@ -345,14 +346,15 @@ export const translations = {
 
     // Chat
     chatHeader: "Інтелектуальний помічник",
-    welcomeMessage: "Привіт! Я ваш AI-асистент. Я маю доступ до даних викладачів та метрик OpenAlex. Запитайте мене про тренди, прогалини в дослідженнях або попросіть підсумувати дані.",
-    welcomeMessageUA: "Привіт! Я ваш AI-асистент. Я маю доступ до даних викладачів та метрик OpenAlex. Запитайте мене про тренди, прогалини в дослідженнях або попросіть підсумувати дані.",
-    inputPlaceholder: "Запитайте про тренди або згенеруйте звіт...",
+    welcomeMessage: "Привіт! Я ResearchIQ — ваш інтелектуальний аналітичний асистент. Я маю **повний доступ** до всіх даних викладачів: публікації, h-index, цитування, індексація Scopus/WoS, наукові теми. Я можу миттєво порівнювати кафедри, ранжувати викладачів, шукати публікації за роком чи базою даних, аналізувати тренди. Запитуйте!",
+    welcomeMessageUA: "Привіт! Я ResearchIQ — ваш інтелектуальний аналітичний асистент. Я маю **повний доступ** до всіх даних викладачів: публікації, h-index, цитування, індексація Scopus/WoS, наукові теми. Я можу миттєво порівнювати кафедри, ранжувати викладачів, шукати публікації за роком чи базою даних, аналізувати тренди. Запитуйте!",
+    inputPlaceholder: "Запитайте про рейтинги, публікації, кафедри або тренди...",
     send: "Надіслати",
     hints: [
-      "Викладачі без публікацій у 2024", 
-      "У кого найвищий H-індекс?", 
-      "Порівняти продуктивність кафедр"
+      "У кого найвищий h-index?",
+      "Публікації за 2025 рік",
+      "Порівняй кафедри",
+      "Зведена таблиця викладачів"
     ],
     errorMsg: "Вибачте, виникла помилка при обробці запиту.",
     clearChat: "Очистити чат",
