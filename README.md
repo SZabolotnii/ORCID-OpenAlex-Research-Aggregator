@@ -35,15 +35,115 @@ ResearchIQ automates the entire workflow:
 
 ## Architecture
 
+### System Overview
+
+```mermaid
+graph TB
+    subgraph Browser["Browser (React 19 SPA)"]
+        UI[Dashboard / Faculty List / Reports]
+        Chat[AI Assistant]
+        Auth[Admin / Viewer Mode]
+    end
+
+    subgraph VPS["VPS (srv1437773.hstgr.cloud)"]
+        Caddy[Caddy Reverse Proxy<br/>*.szabolotnii.site SSL]
+        subgraph Backend["Node.js Backend (port 3001)"]
+            API[Express API]
+            Agent["pi-agent-core<br/>Gemini 2.5 Flash"]
+            Tools["7 Research Tools"]
+            Tenants[Multi-tenant Router]
+        end
+        Data[(Per-tenant JSON<br/>data/csbc.json)]
+        Static[Static Frontend<br/>/var/www/orcid-tracker]
+    end
+
+    subgraph External["External APIs"]
+        ORCID[ORCID Public API]
+        OA[OpenAlex API]
+    end
+
+    Browser -->|HTTPS| Caddy
+    Caddy -->|/api/*| API
+    Caddy -->|/*| Static
+    API --> Agent
+    Agent --> Tools
+    API --> Tenants
+    Tenants --> Data
+    Tools -->|Live metrics| OA
+    Tools -->|Local queries| Data
 ```
-Browser (React SPA)
-  ↕ /api/*
-VPS Backend (Node.js + pi-agent-core)
-  ├── AI Agent (Gemini 2.5 Flash + 7 research tools)
-  ├── Multi-tenant data storage (per-subdomain)
-  └── Server-side auth (admin/viewer modes)
-  ↕
-External APIs: ORCID, OpenAlex
+
+### AI Agent Architecture
+
+The AI assistant is powered by [pi-agent-core](https://github.com/badlogic/pi-mono) — a minimal, extensible agent runtime by Mario Zechner. See [docs/pi-agent.md](docs/pi-agent.md) for details.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant B as Backend API
+    participant A as pi-agent
+    participant G as Gemini 2.5 Flash
+    participant T as Research Tools
+
+    U->>F: "Who has highest h-index?"
+    F->>B: POST /api/chat {query, facultyList}
+    B->>A: Create agent with system prompt<br/>(full faculty snapshot + aggregates)
+    A->>G: User query + tool definitions
+    G-->>A: Answer from context<br/>(no tool call needed)
+    A-->>B: Response text
+    B-->>F: {response: "..."}
+    F-->>U: Display answer
+
+    Note over G,T: Complex queries trigger tool calls
+
+    U->>F: "Scopus publications in 2025"
+    F->>B: POST /api/chat
+    B->>A: Create agent
+    A->>G: Query + tools
+    G->>A: Call search_local_publications
+    A->>T: Execute tool
+    T-->>A: Filtered results
+    A->>G: Tool results
+    G-->>A: Formatted answer
+    A-->>B: Response
+    B-->>F: {response: "..."}
+```
+
+### Multi-tenant Data Flow
+
+```mermaid
+graph LR
+    subgraph Subdomains
+        S1[orcid-csbc.szabolotnii.site]
+        S2[orcid-uni2.szabolotnii.site]
+        S3[orcid-private.szabolotnii.site]
+    end
+
+    subgraph Frontend
+        TD{Tenant Detection<br/>from subdomain}
+    end
+
+    subgraph Backend
+        TR[Tenant Router]
+        AU[Auth Verify]
+    end
+
+    subgraph Storage
+        T1[(csbc.json<br/>public)]
+        T2[(uni2.json<br/>public)]
+        T3[(private.json<br/>password)]
+        TC[(tenants.json)]
+    end
+
+    S1 --> TD
+    S2 --> TD
+    S3 --> TD
+    TD -->|tenantId| TR
+    TR --> TC
+    TR --> T1
+    TR --> T2
+    S3 --> AU -->|verified| T3
 ```
 
 ### Key Features
@@ -56,6 +156,12 @@ External APIs: ORCID, OpenAlex
 | **Batch Import** | CSV import with automatic ORCID + OpenAlex data fetching |
 | **Report Generator** | Standard reports (Scopus/WoS, faculty card, accreditation) + custom template filling |
 | **Bilingual** | English / Ukrainian interface |
+
+### AI Agent — pi-agent-core
+
+The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by Mario Zechner) as the agent runtime. It provides the tool execution loop, parallel tool calls, and streaming — while we define custom research tools and system prompt. The agent receives a **full faculty data snapshot** in the system prompt, so most questions are answered instantly from context without tool calls. For complex queries (filtering, ranking, full publication lists), the agent calls one of 7 custom tools that operate on local data. External API calls (OpenAlex) are used only when fresh data is needed.
+
+> See [docs/pi-agent.md](docs/pi-agent.md) for detailed documentation on agent configuration, tools, and system prompt design.
 
 ### Tech Stack
 
