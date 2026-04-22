@@ -12,9 +12,17 @@
 **Multi-tenant research analytics platform** for university administrators.  
 Aggregate faculty data from ORCID + OpenAlex, analyze with AI, generate ministry reports.
 
-[**Live Demo**](https://orcid-csbc.szabolotnii.site) · [Report Bug](https://github.com/SZabolotnii/ORCID-OpenAlex-Research-Aggregator/issues)
+[**Live Demo**](https://orcid-csbc.szabolotnii.site) · [Kaggle Writeup](https://www.kaggle.com/competitions/gemini-3/writeups/orcid-and-openalex-research-aggregator) · [Report Bug](https://github.com/SZabolotnii/ORCID-OpenAlex-Research-Aggregator/issues)
 
 </div>
+
+---
+
+## Origin
+
+This project was created as part of the [**Vibe Coding with Gemini 3 Pro**](https://www.kaggle.com/competitions/gemini-3) competition on Kaggle. The challenge was to build an innovative application using Google's Gemini API and vibe coding approach. ResearchIQ started as a hackathon prototype built in 5 hours using Google AI Studio, and has since evolved into a full multi-tenant platform with a pi-agent-powered backend.
+
+> [Read the full Kaggle writeup](https://www.kaggle.com/competitions/gemini-3/writeups/orcid-and-openalex-research-aggregator)
 
 ---
 
