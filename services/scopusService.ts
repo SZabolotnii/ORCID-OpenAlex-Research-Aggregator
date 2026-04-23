@@ -44,7 +44,7 @@ export const fetchScopusData = async (orcidId: string, apiKey?: string): Promise
     const url = `https://api.elsevier.com/content/search/scopus?query=AU-ID(${orcidId})&apiKey=${apiKey}`;
     const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
     if (!res.ok) throw new Error("Scopus API Error");
-    const data = await res.json();
+    await res.json();
     
     // Mapping logic would go here
     return []; 

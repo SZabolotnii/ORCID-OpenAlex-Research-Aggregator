@@ -12,13 +12,13 @@ export async function buildFacultyRecord(
   apiKeys: { scopus?: string; wos?: string },
   institution?: string
 ): Promise<Faculty> {
-  let facultyData = await fetchOrcidData(orcid, position, dept);
+  const facultyData = await fetchOrcidData(orcid, position, dept);
 
   const metrics = await fetchOpenAlexMetrics(orcid);
   if (metrics) {
     facultyData.metrics = metrics;
     if (metrics.topWorks && metrics.topWorks.length > 0) {
-      const oaByDoi = new Map(
+      const oaByDoi = new Map<string, boolean>(
         metrics.topWorks.filter(w => w.doi).map(w => [w.doi.toLowerCase(), w.isOa])
       );
       facultyData.publications = facultyData.publications.map(pub => {

@@ -1,16 +1,12 @@
 
-
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2, Save, FolderDown, FileSpreadsheet, Lock, LogOut, Shield, Eye } from 'lucide-react';
+import { HashRouter as Router, Link, useLocation } from 'react-router-dom';
+import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, Globe, Settings, Search, Upload, Save, FolderDown, FileSpreadsheet, Lock, LogOut, Shield, Eye } from 'lucide-react';
 import { Faculty, ApiKeys, Publication, TenantRole } from './types';
-import Dashboard from './components/Dashboard';
-import FacultyList from './components/FacultyList';
-import ChatInterface from './components/ChatInterface';
-import ReportGenerator from './components/ReportGenerator';
 import PublicationDetailsModal from './components/PublicationDetailsModal';
 import ProfileModal from './components/ProfileModal';
-import OrcidSearch from './components/OrcidSearch';
+import AppRoutes from './components/AppRoutes';
+import AppModals from './components/AppModals';
 import { useLanguage } from './contexts/LanguageContext';
 import { buildFacultyRecord } from './services/facultyDataService';
 import { updateTenantPasswords, verifyTenantPassword } from './services/tenantApi';
@@ -348,7 +344,7 @@ function App() {
 
       try {
         await processAndAddFaculty(orcid, position, dept, batchDefaultInstitution);
-      } catch (e) {
+      } catch {
         errors.push(`Row ${i + 1}: failed to fetch ${orcid}`);
       }
 
@@ -392,7 +388,7 @@ function App() {
         } else {
           alert('Invalid JSON format');
         }
-      } catch (err) {
+      } catch {
         alert('Failed to parse JSON file');
       }
     };
@@ -585,165 +581,21 @@ function App() {
           </header>
 
           <div className="p-8 max-w-7xl mx-auto w-full">
-            <Routes>
-              <Route path="/" element={<Dashboard facultyList={facultyList} onSelectFaculty={setSelectedFaculty} />} />
-              <Route
-                path="/faculty"
-                element={
-                  <FacultyList
-                    facultyList={facultyList}
-                    onSelect={setSelectedFaculty}
-                    onDelete={handleDelete}
-                    onRefresh={handleRefreshFaculty}
-                    onEdit={handleEditFaculty}
-                    onBulkDelete={handleBulkDelete}
-                    onBulkUpdate={handleBulkUpdate}
-                    isAdmin={isAdmin}
-                  />
-                }
-              />
-              <Route 
-                path="/search" 
-                element={
-                  <OrcidSearch 
-                    existingFaculty={facultyList} 
-                    onAddFaculty={processAndAddFaculty} 
-                  />
-                } 
-              />
-              <Route path="/chat" element={<ChatInterface tenantId={TENANT_ID} authToken={authToken} />} />
-              <Route path="/reports" element={<ReportGenerator facultyList={facultyList} tenantId={TENANT_ID} authToken={authToken} />} />
-            </Routes>
+            <AppRoutes
+              facultyList={facultyList}
+              isAdmin={isAdmin}
+              tenantId={TENANT_ID}
+              authToken={authToken}
+              onSelectFaculty={setSelectedFaculty}
+              onDelete={handleDelete}
+              onRefresh={handleRefreshFaculty}
+              onEdit={handleEditFaculty}
+              onBulkDelete={handleBulkDelete}
+              onBulkUpdate={handleBulkUpdate}
+              onAddFaculty={processAndAddFaculty}
+            />
           </div>
         </main>
-
-        {/* Settings Modal */}
-        {isSettingsOpen && (
-           <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Database size={18} className="text-indigo-600"/> {t.configureApis}</h3>
-                <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                  {t.enterKeys}
-                </p>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Scopus API Key</label>
-                  <input 
-                    type="password" 
-                    value={apiKeys.scopus}
-                    onChange={(e) => setApiKeys(prev => ({ ...prev, scopus: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    placeholder="Enter Elsevier Key..."
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Web of Science API Key</label>
-                  <input 
-                    type="password" 
-                    value={apiKeys.wos}
-                    onChange={(e) => setApiKeys(prev => ({ ...prev, wos: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    placeholder="Enter WoS Key..."
-                  />
-                </div>
-                <button 
-                    onClick={saveApiKeys}
-                    className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors mt-2"
-                >
-                    {t.saveSettings}
-                </button>
-              </div>
-            </div>
-           </div>
-        )}
-
-        {/* Add Faculty Modal */}
-        {isAdding && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800">{t.trackNew}</h3>
-                <button onClick={() => setIsAdding(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <form onSubmit={handleAddFaculty} className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.orcidId}</label>
-                  <input 
-                    type="text" 
-                    value={newOrcid}
-                    onChange={(e) => setNewOrcid(e.target.value)}
-                    placeholder="0000-0000-0000-0000"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    required
-                  />
-                  <p className="text-xs text-slate-500 mt-1">{t.mustBePublic}</p>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t.institution}</label>
-                    <input
-                        type="text"
-                        value={newInstitution}
-                        onChange={(e) => setNewInstitution(e.target.value)}
-                        placeholder={t.enterInstitutionPlaceholder}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t.dept}</label>
-                        <input
-                            type="text"
-                            value={newDept}
-                            onChange={(e) => setNewDept(e.target.value)}
-                            placeholder={t.enterDeptPlaceholder}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">{t.position}</label>
-                        <select
-                            value={newPosition}
-                            onChange={(e) => setNewPosition(e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                            {t.positions.map((p: any) => (
-                              <option key={p.value} value={p.value}>{p.label}</option>
-                            ))}
-                        </select>
-                    </div>
-                </div>
-
-                {errorAdd && (
-                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">
-                    {errorAdd}
-                  </div>
-                )}
-
-                <div className="pt-2">
-                  <button 
-                    type="submit" 
-                    disabled={loadingAdd}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2"
-                  >
-                    {loadingAdd ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : t.fetchAdd}
-                    {loadingAdd && addStage && (
-                        <span className="text-xs font-normal opacity-90 ml-1 capitalize">
-                           ({addStage === 'OPENALEX' ? t.fetchingOpenAlex : addStage === 'SCOPUS' ? t.fetchingScopus : addStage === 'WOS' ? t.fetchingWos : 'ORCID...'})
-                        </span>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {/* Faculty Profile Modal */}
         {selectedFaculty && (
@@ -756,164 +608,6 @@ function App() {
           />
         )}
 
-        {/* Edit Faculty Modal */}
-        {editingFaculty && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800">{t.editFacultyTitle}</h3>
-                <button onClick={() => setEditingFaculty(null)} className="text-slate-400 hover:text-slate-600 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
-                  <div className="font-semibold text-blue-900">{editingFaculty.name}</div>
-                  <div className="text-xs text-blue-600 font-mono">{editingFaculty.orcidId}</div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.institution}</label>
-                  <input
-                    type="text"
-                    value={editInstitution}
-                    onChange={(e) => setEditInstitution(e.target.value)}
-                    placeholder={t.enterInstitutionPlaceholder}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.dept}</label>
-                  <input
-                    type="text"
-                    value={editDept}
-                    onChange={(e) => setEditDept(e.target.value)}
-                    placeholder={t.enterDeptPlaceholder}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.position}</label>
-                  <select
-                    value={editPosition}
-                    onChange={(e) => setEditPosition(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    {t.positions.map((p: any) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  onClick={handleSaveEdit}
-                  className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition-colors mt-2"
-                >
-                  {t.saveChanges}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Batch Import Modal */}
-        {isBatchImporting && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Upload size={18} className="text-indigo-600" /> {t.batchImportTitle}</h3>
-                <button onClick={() => { setIsBatchImporting(false); setBatchFile(null); setBatchProgress(null); }} className="text-slate-400 hover:text-slate-600 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                  {t.batchImportDesc}
-                </p>
-                <p className="text-xs text-slate-400">{t.csvFormat}</p>
-
-                {/* File Upload */}
-                <div>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => setBatchFile(e.target.files?.[0] || null)}
-                    className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultInstitution}</label>
-                  <input
-                    type="text"
-                    value={batchDefaultInstitution}
-                    onChange={(e) => setBatchDefaultInstitution(e.target.value)}
-                    placeholder={t.enterInstitutionPlaceholder}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultDept}</label>
-                    <input
-                      type="text"
-                      value={batchDefaultDept}
-                      onChange={(e) => setBatchDefaultDept(e.target.value)}
-                      placeholder={t.enterDeptPlaceholder}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t.defaultPosition}</label>
-                    <select
-                      value={batchDefaultPosition}
-                      onChange={(e) => setBatchDefaultPosition(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                      {t.positions.map((p: any) => (
-                        <option key={p.value} value={p.value}>{p.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Progress */}
-                {batchProgress && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm text-slate-600">
-                      <span>{t.processing} {batchProgress.current} {t.ofTotal} {batchProgress.total}</span>
-                      <span className="text-xs text-slate-400 font-mono truncate max-w-[150px]">{batchProgress.name}</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div
-                        className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
-                      />
-                    </div>
-                    {batchProgress.errors.length > 0 && (
-                      <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-100 max-h-20 overflow-y-auto">
-                        {batchProgress.errors.map((e, i) => <div key={i}>{e}</div>)}
-                      </div>
-                    )}
-                    {!batchRunning && batchProgress.current === batchProgress.total && (
-                      <div className="text-sm text-green-700 bg-green-50 p-2 rounded border border-green-100 font-medium">
-                        {t.importComplete}! {batchProgress.errors.length > 0 && `(${batchProgress.errors.length} ${t.importErrors})`}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <button
-                  onClick={handleBatchImport}
-                  disabled={!batchFile || batchRunning}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium shadow-sm transition-colors flex justify-center items-center gap-2 disabled:opacity-50"
-                >
-                  {batchRunning ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
-                  {batchRunning ? t.processing + '...' : t.startImport}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Publication Details Modal */}
         {selectedPublication && (
             <PublicationDetailsModal
@@ -922,142 +616,74 @@ function App() {
             />
         )}
 
-        {/* Admin Login Modal */}
-        {showLoginModal && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Lock size={18} className="text-indigo-600" /> {t.loginAdmin}</h3>
-                <button onClick={() => { setShowLoginModal(false); setLoginPassword(''); setLoginError(''); }} className="text-slate-400 hover:text-slate-600 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.password}</label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => { setLoginPassword(e.target.value); setLoginError(''); }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAdminLogin()}
-                    placeholder={t.enterPassword}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    autoFocus
-                  />
-                </div>
-                {loginError && (
-                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">{loginError}</div>
-                )}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { setShowLoginModal(false); setLoginPassword(''); setLoginError(''); }}
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors"
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    onClick={handleAdminLogin}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
-                  >
-                    {t.login}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Set Password Modal */}
-        {showSetPassword && (
-          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Shield size={18} className="text-indigo-600" /> {t.setPassword}</h3>
-                <button onClick={() => { setShowSetPassword(false); setNewPass(''); setConfirmPass(''); setSetPassError(''); }} className="text-slate-400 hover:text-slate-600 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-500 bg-blue-50 p-3 rounded-lg border border-blue-100">
-                  {t.readOnlyMode}
-                </p>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.newPassword}</label>
-                  <input
-                    type="password"
-                    value={newPass}
-                    onChange={(e) => { setNewPass(e.target.value); setSetPassError(''); }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.confirmPassword}</label>
-                  <input
-                    type="password"
-                    value={confirmPass}
-                    onChange={(e) => { setConfirmPass(e.target.value); setSetPassError(''); }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleSetPassword()}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                  />
-                </div>
-                {setPassError && (
-                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">{setPassError}</div>
-                )}
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => { setShowSetPassword(false); setNewPass(''); setConfirmPass(''); setSetPassError(''); }}
-                    className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-600 hover:bg-slate-50 text-sm font-medium transition-colors"
-                  >
-                    {t.cancel}
-                  </button>
-                  <button
-                    onClick={handleSetPassword}
-                    className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
-                  >
-                    {t.setPassword}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        {/* View Password Modal (private tenants) */}
-        {showViewPasswordModal && (
-          <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200">
-              <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                <h3 className="font-bold text-slate-800 flex items-center gap-2"><Lock size={18} className="text-indigo-600" /> {tenantName || t.loginAdmin}</h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-500 bg-amber-50 p-3 rounded-lg border border-amber-100">
-                  {t.readOnlyMode}
-                </p>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t.password}</label>
-                  <input
-                    type="password"
-                    value={viewPassword}
-                    onChange={(e) => { setViewPassword(e.target.value); setViewPasswordError(''); }}
-                    onKeyDown={(e) => e.key === 'Enter' && handleViewPasswordSubmit()}
-                    placeholder={t.enterPassword}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
-                    autoFocus
-                  />
-                </div>
-                {viewPasswordError && (
-                  <div className="text-red-600 text-sm bg-red-50 p-2 rounded border border-red-100">{viewPasswordError}</div>
-                )}
-                <button
-                  onClick={handleViewPasswordSubmit}
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-sm font-medium shadow-sm transition-colors"
-                >
-                  {t.login}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <AppModals
+          t={t}
+          tenantName={tenantName}
+          apiKeys={apiKeys}
+          setApiKeys={setApiKeys}
+          saveApiKeys={saveApiKeys}
+          isSettingsOpen={isSettingsOpen}
+          setIsSettingsOpen={setIsSettingsOpen}
+          isAdding={isAdding}
+          setIsAdding={setIsAdding}
+          newOrcid={newOrcid}
+          setNewOrcid={setNewOrcid}
+          newInstitution={newInstitution}
+          setNewInstitution={setNewInstitution}
+          newDept={newDept}
+          setNewDept={setNewDept}
+          newPosition={newPosition}
+          setNewPosition={setNewPosition}
+          loadingAdd={loadingAdd}
+          addStage={addStage}
+          errorAdd={errorAdd}
+          handleAddFaculty={handleAddFaculty}
+          editingFaculty={editingFaculty}
+          setEditingFaculty={setEditingFaculty}
+          editInstitution={editInstitution}
+          setEditInstitution={setEditInstitution}
+          editDept={editDept}
+          setEditDept={setEditDept}
+          editPosition={editPosition}
+          setEditPosition={setEditPosition}
+          handleSaveEdit={handleSaveEdit}
+          isBatchImporting={isBatchImporting}
+          setIsBatchImporting={setIsBatchImporting}
+          batchFile={batchFile}
+          setBatchFile={setBatchFile}
+          batchDefaultInstitution={batchDefaultInstitution}
+          setBatchDefaultInstitution={setBatchDefaultInstitution}
+          batchDefaultDept={batchDefaultDept}
+          setBatchDefaultDept={setBatchDefaultDept}
+          batchDefaultPosition={batchDefaultPosition}
+          setBatchDefaultPosition={setBatchDefaultPosition}
+          batchProgress={batchProgress}
+          setBatchProgress={setBatchProgress}
+          batchRunning={batchRunning}
+          handleBatchImport={handleBatchImport}
+          showLoginModal={showLoginModal}
+          setShowLoginModal={setShowLoginModal}
+          loginPassword={loginPassword}
+          setLoginPassword={setLoginPassword}
+          loginError={loginError}
+          setLoginError={setLoginError}
+          handleAdminLogin={handleAdminLogin}
+          showSetPassword={showSetPassword}
+          setShowSetPassword={setShowSetPassword}
+          newPass={newPass}
+          setNewPass={setNewPass}
+          confirmPass={confirmPass}
+          setConfirmPass={setConfirmPass}
+          setPassError={setPassError}
+          setSetPassError={setSetPassError}
+          handleSetPassword={handleSetPassword}
+          showViewPasswordModal={showViewPasswordModal}
+          viewPassword={viewPassword}
+          setViewPassword={setViewPassword}
+          viewPasswordError={viewPasswordError}
+          setViewPasswordError={setViewPasswordError}
+          handleViewPasswordSubmit={handleViewPasswordSubmit}
+        />
       </div>
     </Router>
   );

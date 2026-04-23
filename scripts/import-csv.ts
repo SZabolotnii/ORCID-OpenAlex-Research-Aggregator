@@ -258,10 +258,10 @@ async function fetchOpenAlexMetrics(orcidId: string) {
 
 function enrichWithOA(faculty: Faculty) {
   if (!faculty.metrics?.topWorks?.length) return;
-  const oaByDoi = new Map(
+  const oaByDoi = new Map<string, boolean>(
     faculty.metrics.topWorks
       .filter((w: any) => w.doi)
-      .map((w: any) => [w.doi.toLowerCase(), w.isOa])
+      .map((w: any) => [w.doi.toLowerCase(), Boolean(w.isOa)] as const)
   );
   faculty.publications = faculty.publications.map((pub) => {
     if (pub.doi) {

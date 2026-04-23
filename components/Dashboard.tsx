@@ -1,37 +1,14 @@
 
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { Faculty } from '../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
-import { Users, FileText, TrendingUp, Award, BarChart2, Filter, Database, Globe, Calendar, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import DashboardFilters from './dashboard/DashboardFilters';
+import DashboardInsights from './dashboard/DashboardInsights';
 
 interface DashboardProps {
   facultyList: Faculty[];
   onSelectFaculty?: (faculty: Faculty) => void;
 }
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
-
-function exportCSV(data: Record<string, any>[], filename: string) {
-  if (data.length === 0) return;
-  const headers = Object.keys(data[0]);
-  const rows = data.map(r => headers.map(h => `"${String(r[h]).replace(/"/g, '""')}"`).join(','));
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-const ExportBtn: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-  <button onClick={onClick} className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors" title="Export CSV">
-    <Download size={14} />
-  </button>
-);
 
 const Dashboard: React.FC<DashboardProps> = ({ facultyList, onSelectFaculty }) => {
   const { t } = useLanguage();
@@ -253,7 +230,7 @@ const Dashboard: React.FC<DashboardProps> = ({ facultyList, onSelectFaculty }) =
       if (!radarDeptA || !deptNames.includes(radarDeptA)) setRadarDeptA(deptNames[0]);
       if (!radarDeptB || !deptNames.includes(radarDeptB)) setRadarDeptB(deptNames[1]);
     }
-  }, [deptNames]);
+  }, [deptNames, radarDeptA, radarDeptB]);
 
   const radarData = useMemo(() => {
     if (!radarDeptA || !radarDeptB || radarDeptA === radarDeptB) return [];
@@ -340,302 +317,41 @@ const Dashboard: React.FC<DashboardProps> = ({ facultyList, onSelectFaculty }) =
 
   return (
     <div className="space-y-6">
-      {/* Filters Bar */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center">
-        <div className="flex items-center gap-2 text-slate-500 font-medium mr-2">
-            <Filter size={20} />
-            <span>Filters:</span>
-        </div>
+      <DashboardFilters
+        t={t}
+        departments={departments}
+        availableFaculty={availableFaculty}
+        selectedDept={selectedDept}
+        selectedFacId={selectedFacId}
+        startYear={startYear}
+        endYear={endYear}
+        currentYear={currentYear}
+        setSelectedDept={setSelectedDept}
+        setSelectedFacId={setSelectedFacId}
+        setStartYear={setStartYear}
+        setEndYear={setEndYear}
+      />
 
-        <div className="flex-1 min-w-[180px]">
-             <label className="block text-xs font-semibold text-slate-500 mb-1 ml-1">{t.filterByDept}</label>
-             <select 
-                value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-             >
-                <option value="All">{t.allDepartments}</option>
-                {departments.filter(d => d !== 'All').map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                ))}
-             </select>
-        </div>
-
-        <div className="flex-1 min-w-[180px]">
-             <label className="block text-xs font-semibold text-slate-500 mb-1 ml-1">{t.filterByFaculty}</label>
-             <select 
-                value={selectedFacId}
-                onChange={(e) => setSelectedFacId(e.target.value)}
-                className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-             >
-                <option value="All">{t.allFaculty}</option>
-                {availableFaculty.map(f => (
-                    <option key={f.orcidId} value={f.orcidId}>{f.name}</option>
-                ))}
-             </select>
-        </div>
-
-        <div className="flex gap-2 items-end">
-             <div className="w-24">
-                <label className="block text-xs font-semibold text-slate-500 mb-1 ml-1">{t.fromYear}</label>
-                <input 
-                    type="number"
-                    value={startYear}
-                    onChange={(e) => setStartYear(parseInt(e.target.value) || 2000)}
-                    min="1990"
-                    max={currentYear}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-             </div>
-             <div className="w-24">
-                <label className="block text-xs font-semibold text-slate-500 mb-1 ml-1">{t.toYear}</label>
-                <input 
-                    type="number"
-                    value={endYear}
-                    onChange={(e) => setEndYear(parseInt(e.target.value) || currentYear)}
-                    min="1990"
-                    max={currentYear + 1}
-                    className="w-full p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-             </div>
-        </div>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: t.totalFaculty, value: stats.totalFaculty, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: t.totalPubs, value: stats.totalPubs, icon: FileText, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: t.totalCitations, value: stats.totalCitations, icon: TrendingUp, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: t.avgHIndex, value: stats.avgHIndex, icon: Award, color: 'text-amber-600', bg: 'bg-amber-50' },
-          { label: t.pubsThisYear, value: stats.pubsThisYear, icon: BarChart2, color: 'text-cyan-600', bg: 'bg-cyan-50' },
-          { label: t.scopusPubs, value: stats.scopusPubs, icon: Database, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: t.wosPubs, value: stats.wosPubs, icon: Globe, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-          { label: t.pubsPerFaculty, value: stats.pubsPerFacultyYear, icon: Calendar, color: 'text-rose-600', bg: 'bg-rose-50' },
-          { label: t.oaRatio, value: `${stats.oaRatio}%`, icon: Globe, color: 'text-teal-600', bg: 'bg-teal-50' },
-        ].map((stat, idx) => (
-          <div key={idx} className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-3">
-            <div className={`p-3 rounded-lg ${stat.bg} ${stat.color} shrink-0`}>
-              <stat.icon size={22} />
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 font-medium whitespace-nowrap uppercase tracking-wide">{stat.label}</p>
-              <h4 className="text-xl font-bold text-slate-900">{stat.value}</h4>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">{t.citationHistory} vs Pubs</h3>
-            <ExportBtn onClick={() => exportCSV(trendData, 'citation_trends')} />
-          </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="year" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="left" stroke="#8884d8" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis yAxisId="right" orientation="right" stroke="#3b82f6" fontSize={12} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                />
-                <Legend />
-                <Line yAxisId="left" type="monotone" dataKey="citations" stroke="#8884d8" strokeWidth={3} dot={{ r: 4 }} name="Citations (OA)" />
-                <Line yAxisId="right" type="monotone" dataKey="publications" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} name="Pubs (ORCID)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">{t.hIndexDist}</h3>
-            <ExportBtn onClick={() => exportCSV(hIndexData, 'hindex_distribution')} />
-          </div>
-          <div className="h-64 w-full">
-             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={hIndexData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="range" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false}/>
-                <Tooltip cursor={{ fill: '#f1f5f9' }} />
-                <Bar dataKey="count" fill="#f59e0b" radius={[4, 4, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">
-               {t.topFaculty} <span className="text-sm font-normal text-slate-500">({topAuthors.label})</span>
-            </h3>
-            <ExportBtn onClick={() => exportCSV(topAuthors.data, 'top_faculty')} />
-          </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart 
-                data={topAuthors.data} 
-                layout="vertical" 
-                margin={{ left: 10, right: 30 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                <XAxis type="number" hide />
-                <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    stroke="#64748b" 
-                    fontSize={12} 
-                    tickLine={false} 
-                    axisLine={false} 
-                    width={130} 
-                />
-                <Tooltip cursor={{ fill: '#f1f5f9' }} />
-                <Bar
-                    dataKey="value"
-                    fill={topAuthors.isCitations ? "#8b5cf6" : "#3b82f6"}
-                    radius={[0, 4, 4, 0]}
-                    barSize={20}
-                    name={topAuthors.label}
-                    cursor={onSelectFaculty ? 'pointer' : undefined}
-                    onClick={(data: any) => {
-                      if (onSelectFaculty && data?.orcidId) {
-                        const faculty = facultyList.find(f => f.orcidId === data.orcidId);
-                        if (faculty) onSelectFaculty(faculty);
-                      }
-                    }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-        
-         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">{t.pubTypes}</h3>
-            <ExportBtn onClick={() => exportCSV(typeData, 'publication_types')} />
-          </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={typeData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {typeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-      {/* Radar + OA Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Radar Comparison */}
-        {deptNames.length >= 2 && radarData.length > 0 && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-3">{t.radarComparison}</h3>
-            <div className="flex gap-2 mb-4">
-              <select
-                value={radarDeptA}
-                onChange={e => setRadarDeptA(e.target.value)}
-                className="flex-1 p-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {deptNames.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <span className="text-slate-400 self-center text-xs">vs</span>
-              <select
-                value={radarDeptB}
-                onChange={e => setRadarDeptB(e.target.value)}
-                className="flex-1 p-1.5 border border-slate-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                {deptNames.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis dataKey="metric" fontSize={10} stroke="#64748b" />
-                  <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-                  <Radar name={radarDeptA} dataKey="A" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} />
-                  <Radar name={radarDeptB} dataKey="B" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
-                  <Legend iconType="circle" />
-                  <Tooltip />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* OA Distribution */}
-        {oaDistData.length > 0 && (
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-4">{t.oaDistribution}</h3>
-            <div className="h-56 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={oaDistData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={5} dataKey="value">
-                    <Cell fill="#10b981" />
-                    <Cell fill="#94a3b8" />
-                  </Pie>
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Department Comparison */}
-      {deptComparisonData.length > 1 && (
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-slate-800">{t.deptComparison}</h3>
-            <div className="bg-slate-100 p-1 rounded-lg flex gap-1">
-              {(['publications', 'citations', 'hIndex'] as const).map(m => (
-                <button
-                  key={m}
-                  onClick={() => setDeptCompMetric(m)}
-                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                    deptCompMetric === m ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  {m === 'publications' ? t.publications : m === 'citations' ? t.citations : t.hIndex}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={deptComparisonData} layout="vertical" margin={{ left: 10, right: 30 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#e2e8f0" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} width={140} />
-                <Tooltip cursor={{ fill: '#f1f5f9' }} />
-                <Bar dataKey={deptCompMetric} fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} name={deptCompMetric === 'hIndex' ? t.avgHIndex : deptCompMetric === 'citations' ? t.citations : t.publications} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+      <DashboardInsights
+        t={t}
+        stats={stats}
+        trendData={trendData}
+        hIndexData={hIndexData}
+        topAuthors={topAuthors}
+        typeData={typeData}
+        oaDistData={oaDistData}
+        deptComparisonData={deptComparisonData}
+        deptCompMetric={deptCompMetric}
+        setDeptCompMetric={setDeptCompMetric}
+        deptNames={deptNames}
+        radarDeptA={radarDeptA}
+        radarDeptB={radarDeptB}
+        setRadarDeptA={setRadarDeptA}
+        setRadarDeptB={setRadarDeptB}
+        radarData={radarData}
+        facultyList={facultyList}
+        onSelectFaculty={onSelectFaculty}
+      />
     </div>
   );
 };

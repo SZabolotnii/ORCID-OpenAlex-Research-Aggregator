@@ -103,7 +103,7 @@ export function useTenantSession(tenantId: string): UseTenantSessionResult {
     };
 
     loadData();
-  }, [tenantId, authToken]);
+  }, [tenantId, authToken, clearAuthSession, loadTenantDataFromServer]);
 
   const saveApiKeys = useCallback((value: string) => {
     localStorage.setItem(apiKeysKey, value);

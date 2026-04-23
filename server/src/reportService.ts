@@ -28,10 +28,10 @@ export async function generateReport(
     }
   }
 
-  let reportStructure = "";
-  switch (type) {
+  const reportStructure = (() => {
+    switch (type) {
     case "scopus_wos":
-      reportStructure = `
+      return `
 Structure:
 1. Summary (total Scopus/WoS publications count, by year)
 2. Full Bibliographic List — Markdown table: #, Author(s), Title, Journal, Year, DOI, Database (Scopus/WoS)
@@ -40,9 +40,8 @@ Structure:
 3. Statistics summary table by department
 
 IMPORTANT: Filter to show only indexed publications (sources contain 'scopus' or 'wos').`;
-      break;
     case "faculty_card":
-      reportStructure = `
+      return `
 Individual faculty attestation card. Structure:
 1. Personal Info (Name, Position, Department, ORCID)
 2. Scientometric Indicators — table: H-index, Total Citations, i10-Index, Publications Count, Scopus Count, WoS Count
@@ -52,9 +51,8 @@ Individual faculty attestation card. Structure:
 6. Citation Dynamics — yearly breakdown table
 
 IMPORTANT: If multiple faculty provided, generate a card for each.`;
-      break;
     case "accreditation":
-      reportStructure = `
+      return `
 Research output report for institutional accreditation. Structure:
 1. Executive Summary (institution-level totals)
 2. Department Summary Table — columns: Department, Faculty Count, Total Publications, Scopus Pubs, WoS Pubs, Avg H-index, Total Citations
@@ -66,16 +64,16 @@ Research output report for institutional accreditation. Structure:
 6. Data Quality Notes — flag faculty with missing metrics or zero publications
 
 Use formal academic language suitable for ministry/accreditation commission.`;
-      break;
     default:
-      reportStructure = `
+      return `
 Structure:
 1. Executive Summary
 2. Key Statistics
 3. Research Focus Areas
 4. Notable Researchers / Notable Works (include bibliographic details)
 5. Recommendations`;
-  }
+    }
+  })();
 
   const prompt = `Generate a professional academic report in Markdown format.
 
@@ -121,7 +119,7 @@ ${reportStructure}
     return await generateText({ prompt, temperature: 0.2 });
   } catch (error: any) {
     console.error("[reportService] generateReport failed:", error?.message || error);
-    throw new Error("Report generation failed: " + (error?.message || String(error)));
+    throw new Error("Report generation failed: " + (error?.message || String(error)), { cause: error });
   }
 }
 
@@ -185,6 +183,6 @@ For Excel/CSV inputs, return strictly CSV format.`;
     return await generateText({ prompt, temperature: 0.1 });
   } catch (error: any) {
     console.error("[reportService] fillTemplate failed:", error?.message || error);
-    throw new Error("Template fill failed: " + (error?.message || String(error)));
+    throw new Error("Template fill failed: " + (error?.message || String(error)), { cause: error });
   }
 }

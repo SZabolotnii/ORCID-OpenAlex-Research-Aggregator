@@ -121,7 +121,7 @@ export const searchByAffiliation = async (affiliationName: string): Promise<Arra
         try {
           const name = await fetchBasicPersonDetails(orcidId);
           return { orcidId, name };
-        } catch (e) {
+        } catch {
           return { orcidId, name: 'Unknown' };
         }
       })

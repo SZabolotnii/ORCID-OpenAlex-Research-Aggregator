@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Faculty, Publication, DataSource } from '../types';
-import { X, Award, TrendingUp, FileBarChart, Tag, Building2, BookOpen, ExternalLink, MousePointerClick, ChevronLeft, ChevronRight, Download, FileText, Filter } from 'lucide-react';
+import { X, Award, TrendingUp, FileBarChart, Tag, Building2, BookOpen, ExternalLink, ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ProfileModalProps {
@@ -22,7 +22,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ faculty, facultyList, onClo
 
   const pubYears = useMemo(() => {
     const years = new Set(faculty.publications.map(p => p.year));
-    return Array.from(years).sort((a, b) => b - a);
+    return Array.from(years).sort((a: number, b: number) => b - a);
   }, [faculty.publications]);
 
   const pubTypes = useMemo(() => {
