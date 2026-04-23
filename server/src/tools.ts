@@ -77,6 +77,24 @@ export const searchGlobalWorksSchema = Type.Object({
   ),
 });
 
+export const getCitationTrendsSchema = Type.Object({
+  nameOrOrcid: Type.String({
+    description: "Faculty name (partial match) or exact ORCID ID",
+  }),
+  years: Type.Optional(
+    Type.Number({ description: "Number of recent years to include (default 5)" })
+  ),
+});
+
+export const findCollaborationNetworkSchema = Type.Object({
+  orcid: Type.String({
+    description: "ORCID ID of the researcher to find collaborators for",
+  }),
+  limit: Type.Optional(
+    Type.Number({ description: "Maximum number of collaborators to return (default 10)" })
+  ),
+});
+
 // ---- Tool Execution Logic ----
 
 function getMetricValue(
@@ -372,6 +390,104 @@ export async function executeGetAuthorMetricsLive(params: { orcid: string }) {
   }
 }
 
+export function executeGetCitationTrends(
+  params: { nameOrOrcid: string; years?: number },
+  facultyList: Faculty[]
+) {
+  const query = params.nameOrOrcid.toLowerCase();
+  const faculty = facultyList.find(
+    (f) =>
+      f.orcidId === params.nameOrOrcid ||
+      f.name.toLowerCase().includes(query)
+  );
+
+  if (!faculty) {
+    return { error: `Faculty member "${params.nameOrOrcid}" not found` };
+  }
+
+  const yearsBack = params.years ?? 5;
+  const currentYear = new Date().getFullYear();
+  const fromYear = currentYear - yearsBack + 1;
+
+  const yearlyData: Record<number, { publications: number; citations: number }> = {};
+  for (let y = fromYear; y <= currentYear; y++) {
+    yearlyData[y] = { publications: 0, citations: 0 };
+  }
+
+  for (const pub of faculty.publications) {
+    if (pub.year >= fromYear && pub.year <= currentYear) {
+      yearlyData[pub.year].publications += 1;
+    }
+  }
+
+  if (faculty.metrics?.yearlyStats) {
+    for (const stat of faculty.metrics.yearlyStats) {
+      if (stat.year >= fromYear && stat.year <= currentYear) {
+        yearlyData[stat.year].citations = stat.citations;
+      }
+    }
+  }
+
+  const trend = Object.entries(yearlyData)
+    .map(([year, data]) => ({ year: Number(year), ...data }))
+    .sort((a, b) => a.year - b.year);
+
+  return {
+    name: faculty.name,
+    orcid: faculty.orcidId,
+    department: faculty.department,
+    overall: {
+      hIndex: faculty.metrics?.hIndex ?? null,
+      totalCitations: faculty.metrics?.citationCount ?? null,
+      citations2Year: faculty.metrics?.citationCount2Year ?? null,
+    },
+    trend,
+  };
+}
+
+export async function executeFindCollaborationNetwork(params: {
+  orcid: string;
+  limit?: number;
+}) {
+  const BASE_URL = "https://api.openalex.org";
+  const MAILTO = "admin@researchiq.app";
+  const limit = params.limit ?? 10;
+
+  try {
+    const url = `${BASE_URL}/works?filter=author.orcid:${encodeURIComponent(params.orcid)}&select=id,title,authorships,publication_year&per_page=25&mailto=${MAILTO}`;
+    const res = await fetch(url);
+    if (!res.ok) return { error: "Could not fetch works from OpenAlex" };
+    const data = await res.json();
+
+    const collaboratorCounts: Record<string, { name: string; orcid: string | null; count: number }> = {};
+
+    for (const work of data.results || []) {
+      for (const authorship of work.authorships || []) {
+        const authorOrcid: string | null = authorship.author?.orcid?.replace("https://orcid.org/", "") || null;
+        if (authorOrcid === params.orcid) continue;
+        const authorName: string = authorship.author?.display_name || "Unknown";
+        const key = authorOrcid || authorName;
+        if (!collaboratorCounts[key]) {
+          collaboratorCounts[key] = { name: authorName, orcid: authorOrcid, count: 0 };
+        }
+        collaboratorCounts[key].count += 1;
+      }
+    }
+
+    const collaborators = Object.values(collaboratorCounts)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, limit);
+
+    return {
+      orcid: params.orcid,
+      totalWorksAnalyzed: data.results?.length ?? 0,
+      collaborators,
+    };
+  } catch (e: any) {
+    return { error: e.message };
+  }
+}
+
 export async function executeSearchGlobalWorks(params: {
   query: string;
   year?: number;
@@ -380,8 +496,8 @@ export async function executeSearchGlobalWorks(params: {
   const MAILTO = "admin@researchiq.app";
 
   try {
-    let filter = `default.search:${params.query}`;
-    if (params.year) filter += `,publication_year:${params.year}`;
+    let filter = `default.search:${encodeURIComponent(params.query)}`;
+    if (params.year) filter += `,publication_year:${encodeURIComponent(String(params.year))}`;
 
     const url = `${BASE_URL}/works?filter=${filter}&sort=cited_by_count:desc&per_page=5&mailto=${MAILTO}`;
     const res = await fetch(url);

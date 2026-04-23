@@ -14,11 +14,19 @@ interface LanguageProviderProps {
 }
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = localStorage.getItem('researchiq-language');
+    return (saved === 'en' || saved === 'ua') ? saved : 'en';
+  });
+
+  const handleSetLanguage = (lang: Language) => {
+    localStorage.setItem('researchiq-language', lang);
+    setLanguage(lang);
+  };
 
   const value = {
     language,
-    setLanguage,
+    setLanguage: handleSetLanguage,
     t: translations[language]
   };
 

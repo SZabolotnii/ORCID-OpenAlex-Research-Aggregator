@@ -6,12 +6,16 @@ import {
   getFacultyDetailSchema,
   getAuthorMetricsLiveSchema,
   searchGlobalWorksSchema,
+  getCitationTrendsSchema,
+  findCollaborationNetworkSchema,
   executeQueryFacultyRankings,
   executeSearchLocalPublications,
   executeGetDepartmentComparison,
   executeGetFacultyDetail,
   executeGetAuthorMetricsLive,
   executeSearchGlobalWorks,
+  executeGetCitationTrends,
+  executeFindCollaborationNetwork,
 } from "./tools.js";
 import type { Faculty } from "./types.js";
 
@@ -138,13 +142,16 @@ TODAY'S DATE: ${new Date().toISOString().split("T")[0]}
 
 ## YOUR CAPABILITIES
 1. INSTANT ANSWERS from local data: You have a complete snapshot of all ${facultyList.length} faculty members below, including metrics, publication counts, and recent works. Use this data FIRST.
-2. LOCAL QUERY TOOLS: For complex filtering, rankings, or full publication lists, use: query_faculty_rankings, search_local_publications, get_department_comparison, get_faculty_detail.
-3. EXTERNAL TOOLS: Use get_author_metrics_live ONLY when local data is missing metrics. Use search_global_works ONLY for global literature searches outside our faculty.
+2. LOCAL QUERY TOOLS: For complex filtering, rankings, or full publication lists, use: query_faculty_rankings, search_local_publications, get_department_comparison, get_faculty_detail, get_citation_trends.
+3. COLLABORATION TOOL: Use find_collaboration_network to discover co-authors for a specific researcher via OpenAlex.
+4. EXTERNAL TOOLS: Use get_author_metrics_live ONLY when local data is missing metrics. Use search_global_works ONLY for global literature searches outside our faculty.
 
 ## DECISION RULES
 - Rankings, comparisons, aggregates → Answer from FACULTY DATA below or use query_faculty_rankings / get_department_comparison
 - Publication search/filter → Use search_local_publications
 - Full profile of one person → Answer from data below or use get_faculty_detail for complete publication list
+- Citation trends over time for one person → Use get_citation_trends
+- Collaboration network / co-authors → Use find_collaboration_network (external OpenAlex)
 - Global research trends → Use search_global_works (external OpenAlex)
 - NEVER call get_author_metrics_live in a loop for multiple faculty. The data is already below.
 
@@ -250,6 +257,34 @@ export function createTools(
       parameters: searchGlobalWorksSchema,
       async execute(_id, params) {
         const result = await executeSearchGlobalWorks(params);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result) }],
+          details: null,
+        };
+      },
+    },
+    {
+      name: "get_citation_trends",
+      description:
+        "Get year-by-year publication and citation dynamics for a specific faculty member. Shows how their research output and citations have evolved over recent years. Match by name or ORCID.",
+      label: "Citation Trends",
+      parameters: getCitationTrendsSchema,
+      async execute(_id, params) {
+        const result = executeGetCitationTrends(params, facultyList);
+        return {
+          content: [{ type: "text" as const, text: JSON.stringify(result) }],
+          details: null,
+        };
+      },
+    },
+    {
+      name: "find_collaboration_network",
+      description:
+        "Discover co-authors and collaboration partners for a researcher by fetching their works from OpenAlex and extracting all co-authors. Use for questions like 'Who does this researcher collaborate with?' or 'What is their collaboration network?'.",
+      label: "Collaboration Network",
+      parameters: findCollaborationNetworkSchema,
+      async execute(_id, params) {
+        const result = await executeFindCollaborationNetwork(params);
         return {
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
           details: null,
