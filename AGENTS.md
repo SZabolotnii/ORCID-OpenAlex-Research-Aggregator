@@ -12,6 +12,9 @@ ResearchIQ is a multi-tenant research analytics platform for university administ
 # Frontend
 npm run dev       # Start frontend dev server (port 3000, proxies /api to :3001)
 npm run build     # Production build to dist/
+npm run lint      # ESLint for frontend/shared code
+npm run typecheck # TypeScript type check without emit
+npm run smoke     # API smoke checks against a running backend
 npm run preview   # Preview production build
 
 # Backend
@@ -23,8 +26,6 @@ npm start         # Run compiled server
 # Data Import
 npx tsx scripts/import-csv.ts <csv-file> --tenant <id> --institution "Name"
 ```
-
-No test runner or linter is configured.
 
 ## Environment Variables
 
@@ -108,6 +109,7 @@ Server-side in `server/src/types.ts`: mirrors frontend types + `TenantConfig` (i
 - **Multi-tenant**: tenant detected from subdomain (`orcid-{id}.szabolotnii.site` → id). Data stored per-tenant on disk. Auth is verified server-side and role sessions are issued as backend-signed auth tokens.
 - **Admin/Viewer modes**: controlled by `isAdmin` state in `App.tsx`. Admin mode shows: Search ORCID, Add/Edit/Delete faculty, Import/Export, Settings. Viewer mode: read-only dashboard + AI chat + reports.
 - **Data persistence**: server is the source of truth for tenant data. The frontend keeps tenant-scoped local/session storage only for cached UI state, auth session, chat history, saved reports, and API settings.
+- **Quality gates**: `npm run lint`, `npm run typecheck`, and `npm run build` are the baseline local verification flow. `npm run smoke` is available for live API sanity-checks against a running backend or VPS deployment.
 - **Publication deduplication** in `dataMergeService.ts`: 3-level matching (DOI → title+year → metadata merge).
 - **File parsing** in `ReportGenerator.tsx`: Handles DOCX, XLSX, CSV, PDF, Markdown uploads.
 - **Import script** (`scripts/import-csv.ts`): CLI tool that reads CSV, fetches ORCID+OpenAlex data, then uploads to the protected tenant endpoint using either `--admin-password` or `--auth-token`.

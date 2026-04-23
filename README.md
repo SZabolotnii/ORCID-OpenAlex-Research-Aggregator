@@ -220,6 +220,11 @@ EOF
 # 6. Start both servers
 cd server && npm run dev &
 npm run dev
+
+# 7. Optional local verification
+npm run lint
+npm run typecheck
+npm run build
 ```
 
 Frontend: [http://localhost:3000](http://localhost:3000) (proxies `/api` to backend at :3001)
@@ -252,6 +257,31 @@ npx tsx scripts/import-csv.ts faculty.csv \
 #   --output <file>       Also save JSON locally
 #   --dry-run             Fetch data without uploading
 ```
+
+### Smoke Check Against a Running API
+
+```bash
+# Public/basic tenant checks
+APP_BASE_URL=http://localhost:3001 \
+SMOKE_TENANT_ID=default \
+npm run smoke
+
+# Private tenant read/write checks
+APP_BASE_URL=http://localhost:3001 \
+SMOKE_TENANT_ID=default \
+SMOKE_PRIVATE_TENANT_ID=your-private-tenant \
+SMOKE_VIEWER_PASSWORD=viewer-password \
+SMOKE_ADMIN_PASSWORD=admin-password \
+npm run smoke
+```
+
+`npm run smoke` expects a live backend and verifies:
+- `/api/health`
+- tenant config loading
+- public/basic tenant data read
+- `401` on unauthenticated private tenant read
+- viewer read with token
+- admin write with token
 
 ---
 
