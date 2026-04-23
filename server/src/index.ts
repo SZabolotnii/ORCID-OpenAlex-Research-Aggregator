@@ -2,12 +2,12 @@ import express from "express";
 import cors from "cors";
 import { rateLimit } from "express-rate-limit";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
-import { createHash, timingSafeEqual } from "crypto";
+import { createHash, createHmac, timingSafeEqual } from "crypto";
 import { Agent } from "@mariozechner/pi-agent-core";
-import { getModel } from "@mariozechner/pi-ai";
 import { buildSystemPrompt, createTools } from "./agent.js";
+import { getChatModel, getResolvedLlmSummary } from "./llmProvider.js";
 import { generateReport, fillTemplate } from "./reportService.js";
-import type { ChatRequest, Faculty, TenantConfig } from "./types.js";
+import type { ChatRequest, Faculty, TenantConfig, TenantRole } from "./types.js";
 
 const DATA_DIR = process.env.DATA_DIR || "/opt/orcid-tracker-api/data";
 const TENANTS_FILE = `${DATA_DIR}/tenants.json`;
@@ -54,6 +54,93 @@ function loadTenantData(tenantId: string): Faculty[] {
   const path = tenantDataPath(tenantId);
   if (!existsSync(path)) return [];
   return JSON.parse(readFileSync(path, "utf-8"));
+}
+
+const AUTH_SECRET =
+  process.env.AUTH_TOKEN_SECRET || process.env.GEMINI_API_KEY || "researchiq-dev-secret";
+const AUTH_TTL_MS = 12 * 60 * 60 * 1000;
+
+type AuthContext = {
+  tenantId: string;
+  role: TenantRole;
+  exp: number;
+};
+
+function encodeBase64Url(value: string): string {
+  return Buffer.from(value, "utf-8").toString("base64url");
+}
+
+function decodeBase64Url(value: string): string {
+  return Buffer.from(value, "base64url").toString("utf-8");
+}
+
+function signAuthToken(tenantId: string, role: TenantRole): string {
+  const payload: AuthContext = {
+    tenantId,
+    role,
+    exp: Date.now() + AUTH_TTL_MS,
+  };
+  const encodedPayload = encodeBase64Url(JSON.stringify(payload));
+  const signature = createHmac("sha256", AUTH_SECRET)
+    .update(encodedPayload)
+    .digest("base64url");
+  return `${encodedPayload}.${signature}`;
+}
+
+function verifyAuthToken(token: string): AuthContext | null {
+  const [encodedPayload, signature] = token.split(".");
+  if (!encodedPayload || !signature) return null;
+
+  const expectedSignature = createHmac("sha256", AUTH_SECRET)
+    .update(encodedPayload)
+    .digest("base64url");
+
+  if (signature.length !== expectedSignature.length) return null;
+  if (
+    !timingSafeEqual(
+      Buffer.from(signature, "utf-8"),
+      Buffer.from(expectedSignature, "utf-8")
+    )
+  ) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(decodeBase64Url(encodedPayload)) as AuthContext;
+    if (!payload.tenantId || !payload.role || !payload.exp) return null;
+    if (payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function getAuthContext(req: express.Request): AuthContext | null {
+  const header = req.header("authorization");
+  if (!header?.startsWith("Bearer ")) return null;
+  return verifyAuthToken(header.slice("Bearer ".length));
+}
+
+function hasTenantReadAccess(
+  tenant: TenantConfig,
+  auth: AuthContext | null,
+  tenantId: string
+): boolean {
+  if (tenant.public) return true;
+  return !!auth && auth.tenantId === tenantId && (auth.role === "viewer" || auth.role === "admin");
+}
+
+function hasTenantAdminAccess(auth: AuthContext | null, tenantId: string): boolean {
+  return !!auth && auth.tenantId === tenantId && auth.role === "admin";
+}
+
+function requireTenant(req: express.Request, res: express.Response, tenantId: string): TenantConfig | null {
+  const tenant = getTenant(tenantId);
+  if (!tenant) {
+    res.status(404).json({ error: "Tenant not found" });
+    return null;
+  }
+  return tenant;
 }
 
 // --- Express app ---
@@ -131,11 +218,11 @@ app.post("/api/tenant/:id/verify", authLimiter, (req, res) => {
   const hash = sha256(password);
 
   if (tenant.adminPasswordHash && safeCompareHashes(hash, tenant.adminPasswordHash)) {
-    res.json({ role: "admin" });
+    res.json({ role: "admin", token: signAuthToken(tenant.id, "admin") });
     return;
   }
   if (tenant.viewPasswordHash && safeCompareHashes(hash, tenant.viewPasswordHash)) {
-    res.json({ role: "viewer" });
+    res.json({ role: "viewer", token: signAuthToken(tenant.id, "viewer") });
     return;
   }
 
@@ -152,8 +239,21 @@ app.post("/api/tenant/:id/set-password", (req, res) => {
     return;
   }
 
-  // If admin password already set, require current password
-  if (tenant.adminPasswordHash && currentAdminPassword) {
+  if (!adminPassword && viewPassword === undefined) {
+    res.status(400).json({ error: "No password changes provided" });
+    return;
+  }
+
+  if (tenant.adminPasswordHash) {
+    const auth = getAuthContext(req);
+    if (!hasTenantAdminAccess(auth, tenant.id)) {
+      res.status(401).json({ error: "Admin authentication required" });
+      return;
+    }
+    if (!currentAdminPassword) {
+      res.status(400).json({ error: "Current admin password required" });
+      return;
+    }
     if (!safeCompareHashes(sha256(currentAdminPassword), tenant.adminPasswordHash)) {
       res.status(403).json({ error: "Wrong current admin password" });
       return;
@@ -173,7 +273,17 @@ app.post("/api/tenant/:id/set-password", (req, res) => {
 
 app.get("/api/data/:tenantId", (req, res) => {
   try {
-    res.json(loadTenantData(req.params.tenantId));
+    const tenantId = sanitizeTenantId(req.params.tenantId);
+    const tenant = requireTenant(req, res, tenantId);
+    if (!tenant) return;
+
+    const auth = getAuthContext(req);
+    if (!hasTenantReadAccess(tenant, auth, tenantId)) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    res.json(loadTenantData(tenantId));
   } catch (e: any) {
     const status = e.message === "Invalid tenantId" ? 400 : 500;
     res.status(status).json({ error: e.message });
@@ -185,6 +295,12 @@ app.post("/api/data/:tenantId", (req, res) => {
     sanitizeTenantId(req.params.tenantId);
   } catch (e: any) {
     res.status(400).json({ error: e.message });
+    return;
+  }
+
+  const auth = getAuthContext(req);
+  if (!hasTenantAdminAccess(auth, req.params.tenantId)) {
+    res.status(401).json({ error: "Admin authentication required" });
     return;
   }
 
@@ -217,6 +333,16 @@ app.post("/api/data/:tenantId", (req, res) => {
 // Backward compat: /api/data without tenantId → "default"
 app.get("/api/data", (_req, res) => {
   try {
+    const tenant = getTenant("default");
+    if (!tenant) {
+      res.status(404).json({ error: "Tenant not found" });
+      return;
+    }
+    const auth = getAuthContext(_req);
+    if (!hasTenantReadAccess(tenant, auth, "default")) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
     res.json(loadTenantData("default"));
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -224,6 +350,11 @@ app.get("/api/data", (_req, res) => {
 });
 
 app.post("/api/data", (req, res) => {
+  const auth = getAuthContext(req);
+  if (!hasTenantAdminAccess(auth, "default")) {
+    res.status(401).json({ error: "Admin authentication required" });
+    return;
+  }
   const facultyList = req.body as Faculty[];
   if (!Array.isArray(facultyList)) {
     res.status(400).json({ error: "Expected an array of faculty" });
@@ -252,18 +383,26 @@ const reportLimiter = rateLimit({
 });
 
 app.post("/api/reports/generate", reportLimiter, async (req, res) => {
-  const { facultyList, type, department, facultyId, lang, templateContent, fileType, additionalInstructions } = req.body;
+  const { tenantId, type, department, facultyId, lang, templateContent, fileType, additionalInstructions } = req.body;
 
-  if (!facultyList || !Array.isArray(facultyList)) {
-    res.status(400).json({ error: "Missing or invalid facultyList" });
+  if (!tenantId) {
+    res.status(400).json({ error: "Missing tenantId" });
     return;
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "GEMINI_API_KEY not configured on server" });
+  const tenant = getTenant(tenantId);
+  if (!tenant) {
+    res.status(404).json({ error: "Tenant not found" });
     return;
   }
+
+  const auth = getAuthContext(req);
+  if (!hasTenantReadAccess(tenant, auth, tenantId)) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+
+  const facultyList = loadTenantData(tenantId);
 
   try {
     let result: string;
@@ -275,8 +414,7 @@ app.post("/api/reports/generate", reportLimiter, async (req, res) => {
         lang || "ua",
         additionalInstructions || "",
         department || "All",
-        facultyId || "All",
-        apiKey
+        facultyId || "All"
       );
     } else {
       result = await generateReport(
@@ -284,11 +422,11 @@ app.post("/api/reports/generate", reportLimiter, async (req, res) => {
         type || "general",
         department || "All",
         facultyId || "All",
-        lang || "ua",
-        apiKey
+        lang || "ua"
       );
     }
-    res.json({ content: result });
+    const llm = await getResolvedLlmSummary();
+    res.json({ content: result, provider: llm.provider, modelId: llm.modelId });
   } catch (error: any) {
     console.error("Report endpoint error:", error);
     res.status(500).json({ error: error.message || "Report generation failed" });
@@ -298,19 +436,27 @@ app.post("/api/reports/generate", reportLimiter, async (req, res) => {
 // --- AI Chat ---
 
 app.post("/api/chat", chatLimiter, async (req, res) => {
-  const { query, facultyList, history, lang } = req.body as ChatRequest;
+  const { tenantId, query, history, lang } = req.body as ChatRequest;
 
-  if (!query || !facultyList) {
-    res.status(400).json({ error: "Missing query or facultyList" });
+  if (!query || !tenantId) {
+    res.status(400).json({ error: "Missing query or tenantId" });
     return;
   }
 
   try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      res.status(500).json({ error: "GEMINI_API_KEY not configured" });
+    const tenant = getTenant(tenantId);
+    if (!tenant) {
+      res.status(404).json({ error: "Tenant not found" });
       return;
     }
+
+    const auth = getAuthContext(req);
+    if (!hasTenantReadAccess(tenant, auth, tenantId)) {
+      res.status(401).json({ error: "Authentication required" });
+      return;
+    }
+
+    const facultyList = loadTenantData(tenantId);
 
     const systemPrompt = buildSystemPrompt(facultyList, lang || "ua");
     const tools = createTools(facultyList);
@@ -327,7 +473,7 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
     }
     messages.push({ role: "user", content: [{ type: "text", text: query }] });
 
-    const model = getModel("google", "gemini-2.5-flash");
+    const { model, apiKey, provider, modelId } = await getChatModel();
     const agent = new Agent({
       initialState: {
         systemPrompt,
@@ -354,7 +500,11 @@ app.post("/api/chat", chatLimiter, async (req, res) => {
       }
     }
 
-    res.json({ response: responseText || "No response generated." });
+    res.json({
+      response: responseText || "No response generated.",
+      provider,
+      modelId,
+    });
   } catch (error: any) {
     console.error("Agent error:", error);
     res.status(500).json({

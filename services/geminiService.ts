@@ -1,7 +1,15 @@
-import { Faculty, ChatMessage } from "../types";
+import { ChatMessage } from "../types";
 
 // API base URL — proxied in dev via vite, direct in production
 const API_BASE = '/api';
+
+function buildHeaders(authToken?: string): HeadersInit {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (authToken) {
+    headers.Authorization = `Bearer ${authToken}`;
+  }
+  return headers;
+}
 
 /**
  * AI Chat via pi-agent backend.
@@ -9,16 +17,17 @@ const API_BASE = '/api';
  * full access to local data tools + external OpenAlex tools.
  */
 export const analyzeFacultyData = async (
-  facultyList: Faculty[],
+  tenantId: string,
   query: string,
   history: ChatMessage[],
-  lang: 'en' | 'ua'
+  lang: 'en' | 'ua',
+  authToken?: string
 ): Promise<string> => {
   try {
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query, facultyList, history, lang }),
+      headers: buildHeaders(authToken),
+      body: JSON.stringify({ tenantId, query, history, lang }),
     });
 
     if (!response.ok) {
@@ -40,17 +49,18 @@ export const analyzeFacultyData = async (
  * Report Generation — proxied to backend to keep Gemini API key server-side.
  */
 export const generateReportContent = async (
-  facultyList: Faculty[],
+  tenantId: string,
   type: string,
   department: string,
   facultyId: string,
-  lang: 'en' | 'ua'
+  lang: 'en' | 'ua',
+  authToken?: string
 ): Promise<string> => {
   try {
     const response = await fetch(`${API_BASE}/reports/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ facultyList, type, department, facultyId, lang }),
+      headers: buildHeaders(authToken),
+      body: JSON.stringify({ tenantId, type, department, facultyId, lang }),
     });
 
     if (!response.ok) {
@@ -72,20 +82,21 @@ export const generateReportContent = async (
  * Template filling — proxied to backend.
  */
 export const fillReportTemplate = async (
-  facultyList: Faculty[],
+  tenantId: string,
   templateContent: string,
   fileType: 'csv' | 'docx',
   lang: 'en' | 'ua',
   additionalInstructions: string = '',
   department: string = 'All',
-  facultyId: string = 'All'
+  facultyId: string = 'All',
+  authToken?: string
 ): Promise<string> => {
   try {
     const response = await fetch(`${API_BASE}/reports/generate`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildHeaders(authToken),
       body: JSON.stringify({
-        facultyList, templateContent, fileType, lang,
+        tenantId, templateContent, fileType, lang,
         additionalInstructions, department, facultyId,
       }),
     });

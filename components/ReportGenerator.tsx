@@ -17,23 +17,26 @@ declare global {
 
 interface ReportGeneratorProps {
   facultyList: Faculty[];
+  tenantId: string;
+  authToken?: string | null;
 }
 
-const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
+const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList, tenantId, authToken }) => {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<'standard' | 'custom' | 'history'>('standard');
+  const storageKey = `saved_reports_${tenantId}`;
 
   // Report History
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('saved_reports');
+      const saved = localStorage.getItem(storageKey);
       if (saved) setSavedReports(JSON.parse(saved));
     } catch (e) {
       console.error("Failed to parse saved reports", e);
     }
-  }, []);
+  }, [storageKey]);
 
   const saveReport = (content: string) => {
     const report: SavedReport = {
@@ -46,13 +49,13 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     };
     const updated = [report, ...savedReports].slice(0, 10);
     setSavedReports(updated);
-    localStorage.setItem('saved_reports', JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
   };
 
   const deleteReport = (id: string) => {
     const updated = savedReports.filter(r => r.id !== id);
     setSavedReports(updated);
-    localStorage.setItem('saved_reports', JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
   };
 
   const loadReport = (report: SavedReport) => {
@@ -114,7 +117,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     setIsGenerating(true);
     setLastReport(null);
     try {
-      const content = await generateReportContent(facultyList, type, department, facultyId, language);
+      const content = await generateReportContent(tenantId, type, department, facultyId, language, authToken || undefined);
       setLastReport(content);
       if (content) saveReport(content);
       setViewMode('preview');
@@ -132,13 +135,14 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     setLastReport(null);
     try {
       const content = await fillReportTemplate(
-        facultyList, 
+        tenantId,
         templateContent, 
         parsedFileType as 'csv' | 'docx', // reusing type alias loosely here as 'text' content
         language,
         additionalInstructions,
         department,
-        facultyId
+        facultyId,
+        authToken || undefined
       );
       setLastReport(content);
       if (content) saveReport(content);
@@ -435,7 +439,7 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
         <head><title>Report</title></head>
         <body>
             <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-            ${window.marked ? window.marked.parse(lastReport) : lastReport.replace(/\n/g, '<br/>')}
+            ${lastReport.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br/>')}
             </div>
         </body>
         </html>`;
@@ -451,28 +455,9 @@ const ReportGenerator: React.FC<ReportGeneratorProps> = ({ facultyList }) => {
     document.body.removeChild(a);
   };
 
-  // Robust Markdown Renderer using Marked.js
-  const renderMarkdown = (text: string) => {
-    if (window.marked) {
-      const html = window.marked.parse(text);
-      return (
-        <div 
-          className="
-            prose prose-sm max-w-none text-slate-700 
-            prose-headings:font-bold prose-headings:text-slate-900 
-            prose-h1:text-2xl prose-h2:text-xl prose-h2:text-indigo-700 prose-h2:border-b prose-h2:border-slate-200 prose-h2:pb-2
-            prose-a:text-indigo-600 
-            prose-strong:text-slate-900
-            [&>table]:w-full [&>table]:border-collapse [&>table]:my-4
-            [&>table>thead>tr>th]:border [&>table>thead>tr>th]:border-slate-300 [&>table>thead>tr>th]:bg-slate-50 [&>table>thead>tr>th]:p-2 [&>table>thead>tr>th]:text-left
-            [&>table>tbody>tr>td]:border [&>table>tbody>tr>td]:border-slate-200 [&>table>tbody>tr>td]:p-2
-          "
-          dangerouslySetInnerHTML={{ __html: html }} 
-        />
-      );
-    }
-    return <pre className="whitespace-pre-wrap">{text}</pre>;
-  };
+  const renderMarkdown = (text: string) => (
+    <pre className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 font-sans">{text}</pre>
+  );
 
   const getFileIcon = (type: string | null) => {
       switch(type) {

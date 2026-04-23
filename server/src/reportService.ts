@@ -1,11 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import type { Faculty } from "./types.js";
-
-const MODEL = "gemini-2.5-flash";
-
-function getAI(apiKey: string) {
-  return new GoogleGenAI({ apiKey });
-}
+import { generateText } from "./llmProvider.js";
 
 // ---- Standard report generation ----
 
@@ -14,10 +8,8 @@ export async function generateReport(
   type: string,
   department: string,
   facultyId: string,
-  lang: "en" | "ua",
-  apiKey: string
+  lang: "en" | "ua"
 ): Promise<string> {
-  const ai = getAI(apiKey);
   const langInstruction = lang === "ua" ? "Ukrainian" : "English";
 
   let dataToAnalyze = facultyList;
@@ -123,14 +115,10 @@ ${JSON.stringify(
 
 ${reportStructure}
 
-Keep it formal. Use Markdown tables for statistics.`;
+  Keep it formal. Use Markdown tables for statistics.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: prompt,
-    });
-    return response.text ?? "No content returned.";
+    return await generateText({ prompt, temperature: 0.2 });
   } catch (error: any) {
     console.error("[reportService] generateReport failed:", error?.message || error);
     throw new Error("Report generation failed: " + (error?.message || String(error)));
@@ -146,10 +134,8 @@ export async function fillTemplate(
   lang: "en" | "ua",
   additionalInstructions: string,
   department: string,
-  facultyId: string,
-  apiKey: string
+  facultyId: string
 ): Promise<string> {
-  const ai = getAI(apiKey);
   const langInstruction = lang === "ua" ? "Ukrainian" : "English";
 
   let dataToProcess = facultyList;
@@ -196,11 +182,7 @@ Output ONLY the filled content. Language: ${langInstruction}.
 For Excel/CSV inputs, return strictly CSV format.`;
 
   try {
-    const response = await ai.models.generateContent({
-      model: MODEL,
-      contents: prompt,
-    });
-    return response.text ?? "No content returned.";
+    return await generateText({ prompt, temperature: 0.1 });
   } catch (error: any) {
     console.error("[reportService] fillTemplate failed:", error?.message || error);
     throw new Error("Template fill failed: " + (error?.message || String(error)));

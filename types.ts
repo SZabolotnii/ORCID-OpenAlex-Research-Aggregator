@@ -69,6 +69,8 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export type TenantRole = 'admin' | 'viewer';
+
 export interface ReportConfig {
   type: 'department' | 'individual' | 'annual';
   department?: string;

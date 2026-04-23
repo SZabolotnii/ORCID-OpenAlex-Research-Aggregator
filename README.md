@@ -3,7 +3,7 @@
 
 # ResearchIQ: AI-Powered Academic Analytics
 
-[![Built with Gemini](https://img.shields.io/badge/Gemini-2.5%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![LLM Providers](https://img.shields.io/badge/LLM-Gemini%20%7C%20OpenRouter-blue)](https://openrouter.ai/)
 [![pi-agent](https://img.shields.io/badge/pi--agent-0.68-purple)](https://github.com/badlogic/pi-mono)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -57,7 +57,7 @@ graph TB
         Caddy[Caddy Reverse Proxy<br/>*.szabolotnii.site SSL]
         subgraph Backend["Node.js Backend (port 3001)"]
             API[Express API]
-            Agent["pi-agent-core<br/>Gemini 2.5 Flash"]
+            Agent["pi-agent-core<br/>Gemini / OpenRouter"]
             Tools["7 Research Tools"]
             Tenants[Multi-tenant Router]
         end
@@ -83,7 +83,7 @@ graph TB
 
 ### AI Agent Architecture
 
-The AI assistant is powered by [pi-agent-core](https://github.com/badlogic/pi-mono) — a minimal, extensible agent runtime by Mario Zechner. See [docs/pi-agent.md](docs/pi-agent.md) for details.
+The AI assistant is powered by [pi-agent-core](https://github.com/badlogic/pi-mono) — a minimal, extensible agent runtime by Mario Zechner. The backend can run either Gemini or OpenRouter-selected models through a provider resolver, while keeping keys and model-selection logic server-side. See [docs/pi-agent.md](docs/pi-agent.md) for details.
 
 ```mermaid
 sequenceDiagram
@@ -91,11 +91,11 @@ sequenceDiagram
     participant F as Frontend
     participant B as Backend API
     participant A as pi-agent
-    participant G as Gemini 2.5 Flash
+    participant G as Backend-selected LLM
     participant T as Research Tools
 
     U->>F: "Who has highest h-index?"
-    F->>B: POST /api/chat {query, facultyList}
+    F->>B: POST /api/chat {tenantId, query}
     B->>A: Create agent with system prompt<br/>(full faculty snapshot + aggregates)
     A->>G: User query + tool definitions
     G-->>A: Answer from context<br/>(no tool call needed)
@@ -167,7 +167,7 @@ graph LR
 
 ### AI Agent — pi-agent-core
 
-The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by Mario Zechner) as the agent runtime. It provides the tool execution loop, parallel tool calls, and streaming — while we define custom research tools and system prompt. The agent receives a **full faculty data snapshot** in the system prompt, so most questions are answered instantly from context without tool calls. For complex queries (filtering, ranking, full publication lists), the agent calls one of 7 custom tools that operate on local data. External API calls (OpenAlex) are used only when fresh data is needed.
+The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by Mario Zechner) as the agent runtime. It provides the tool execution loop, parallel tool calls, and streaming — while we define custom research tools and system prompt. The agent receives a **full faculty data snapshot** in the system prompt, so most questions are answered instantly from context without tool calls. For complex queries (filtering, ranking, full publication lists), the agent calls one of 7 custom tools that operate on local data. External API calls (OpenAlex) are used only when fresh data is needed. The backing LLM can be selected on the backend via `LLM_PROVIDER=gemini|openrouter|auto`.
 
 > See [docs/pi-agent.md](docs/pi-agent.md) for detailed documentation on agent configuration, tools, and system prompt design.
 
@@ -176,7 +176,7 @@ The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by M
 | Layer | Technologies |
 |-------|-------------|
 | **Frontend** | React 19, TypeScript, Vite, TailwindCSS, Recharts |
-| **Backend** | Node.js, Express, pi-agent-core, pi-ai (Gemini) |
+| **Backend** | Node.js, Express, pi-agent-core, pi-ai (Gemini / OpenRouter) |
 | **Data Sources** | ORCID Public API, OpenAlex API |
 | **Deployment** | VPS, PM2, Caddy (reverse proxy + SSL) |
 
@@ -187,7 +187,7 @@ The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by M
 ### Prerequisites
 
 - **Node.js** 20+ ([Download](https://nodejs.org/))
-- **Gemini API Key** ([Get Free Key](https://aistudio.google.com/apikey))
+- **Gemini API key** or **OpenRouter API key**
 
 ### Local Development
 
@@ -202,16 +202,37 @@ npm install
 # 3. Backend
 cd server && npm install && cd ..
 
-# 4. Configure
-echo "GEMINI_API_KEY=your_key_here" > .env
-echo "GEMINI_API_KEY=your_key_here" > server/.env
+# 4. Optional frontend env
+touch .env
 
-# 5. Start both servers
+# 5. Configure backend (example: Gemini mode)
+cat > server/.env <<'EOF'
+LLM_PROVIDER=gemini
+GEMINI_API_KEY=your_key_here
+PORT=3001
+DATA_DIR=/opt/orcid-tracker-api/data
+AUTH_TOKEN_SECRET=replace-with-a-long-random-secret
+EOF
+
+# Production template:
+# cp server/.env.production.example server/.env
+
+# 6. Start both servers
 cd server && npm run dev &
 npm run dev
 ```
 
 Frontend: [http://localhost:3000](http://localhost:3000) (proxies `/api` to backend at :3001)
+
+### LLM Provider Modes
+
+The backend supports three provider modes:
+
+- `LLM_PROVIDER=gemini` — use Gemini only
+- `LLM_PROVIDER=openrouter` — use OpenRouter only
+- `LLM_PROVIDER=auto` — prefer OpenRouter when `OPENROUTER_API_KEY` is present, otherwise fall back to Gemini
+
+For OpenRouter, the backend can auto-discover a current free model from `https://shir-man.com/api/free-llm/top-models`, cache it, and fall back to `openrouter/free`. You can still pin a model explicitly with `OPENROUTER_MODEL`, `OPENROUTER_CHAT_MODEL`, or `OPENROUTER_REPORT_MODEL`.
 
 ### Import Faculty Data
 
@@ -247,7 +268,9 @@ researchiq/
 │   ├── OrcidSearch.tsx      # ORCID affiliation search (admin only)
 │   └── ProfileModal.tsx     # Faculty detail view
 ├── services/
-│   ├── geminiService.ts     # Chat → /api/chat backend; Reports → direct Gemini
+│   ├── geminiService.ts     # Frontend client for /api/chat and /api/reports/generate
+│   ├── tenantApi.ts         # Tenant auth + protected data API
+│   ├── facultyDataService.ts# Faculty enrichment pipeline
 │   ├── orcidService.ts      # ORCID Public API
 │   ├── openAlexService.ts   # OpenAlex API (metrics, works)
 │   └── dataMergeService.ts  # Publication deduplication
@@ -256,7 +279,10 @@ researchiq/
 │       ├── index.ts         # Express API: tenants, data, chat
 │       ├── agent.ts         # pi-agent config, system prompt, context builder
 │       ├── tools.ts         # 7 research tool implementations
+│       ├── llmProvider.ts   # Gemini/OpenRouter selection + OpenRouter discovery
 │       └── types.ts         # Shared types
+├── docs/
+│   └── openrouter-deployment.md # Production env and rollout notes
 ├── scripts/
 │   └── import-csv.ts        # CLI data import tool
 ├── contexts/                # LanguageContext (EN/UA)
@@ -307,6 +333,8 @@ ssh root@server "cd /opt/orcid-tracker-api && npx tsc && pm2 restart orcid-api"
 npm run build
 scp -r dist/* root@server:/var/www/orcid-tracker/
 ```
+
+For provider configuration and production env examples, see [server/.env.production.example](server/.env.production.example) and [docs/openrouter-deployment.md](docs/openrouter-deployment.md).
 
 ### Caddy Configuration
 

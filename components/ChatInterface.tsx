@@ -1,26 +1,28 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Faculty, ChatMessage } from '../types';
+import { ChatMessage } from '../types';
 import { analyzeFacultyData } from '../services/geminiService';
 import { Send, Bot, User, Sparkles, Trash2, Download } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface ChatInterfaceProps {
-  facultyList: Faculty[];
+  tenantId: string;
+  authToken?: string | null;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ tenantId, authToken }) => {
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [loaded, setLoaded] = useState(false);
+  const storageKey = `chat_history_${tenantId}`;
 
   // Load chat history from localStorage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('chat_history');
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -40,7 +42,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
       timestamp: Date.now()
     }]);
     setLoaded(true);
-  }, []);
+  }, [language, storageKey, t.welcomeMessage, t.welcomeMessageUA]);
 
   // Update welcome message when language changes (only if we just have the welcome)
   useEffect(() => {
@@ -61,9 +63,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
   // Save to localStorage whenever messages change
   useEffect(() => {
     if (loaded && messages.length > 0) {
-      localStorage.setItem('chat_history', JSON.stringify(messages));
+      localStorage.setItem(storageKey, JSON.stringify(messages));
     }
-  }, [messages, loaded]);
+  }, [messages, loaded, storageKey]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,7 +90,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
     setIsLoading(true);
 
     try {
-      const response = await analyzeFacultyData(facultyList, userMsg.content, messages, language);
+      const response = await analyzeFacultyData(tenantId, userMsg.content, messages, language, authToken || undefined);
 
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -119,7 +121,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
       timestamp: Date.now()
     };
     setMessages([welcome]);
-    localStorage.removeItem('chat_history');
+    localStorage.removeItem(storageKey);
   };
 
   const handleExportChat = () => {
@@ -177,7 +179,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ facultyList }) => {
                   : 'bg-white text-slate-700 border border-slate-200 rounded-tl-none prose prose-sm max-w-none'
               }`}>
                 {msg.role === 'model' ? (
-                   <div dangerouslySetInnerHTML={{ __html: msg.content.replace(/\n/g, '<br />').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                   <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                 ) : (
                   msg.content
                 )}

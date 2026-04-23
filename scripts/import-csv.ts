@@ -11,6 +11,8 @@
  *   --department <name>   Default department (if not in CSV)
  *   --position <name>     Default position (default: Associate Professor)
  *   --output <file>       Also save JSON to local file
+ *   --admin-password <pw> Admin password used to obtain a tenant write token
+ *   --auth-token <token>  Existing bearer token for tenant write access
  *   --dry-run             Fetch data but don't upload
  *
  * CSV format (no header required):
@@ -63,6 +65,8 @@ if (!csvFile) {
   console.error("  --department <name>   Default department");
   console.error("  --position <name>     Default position (default: Associate Professor)");
   console.error("  --output <file>       Save JSON locally");
+  console.error("  --admin-password <pw> Admin password for tenant write access");
+  console.error("  --auth-token <token>  Existing bearer token for tenant write access");
   console.error("  --dry-run             Don't upload, just fetch and save");
   process.exit(1);
 }
@@ -78,7 +82,33 @@ const DEFAULT_INSTITUTION = getArg("--institution", "");
 const DEFAULT_DEPARTMENT = getArg("--department", "");
 const DEFAULT_POSITION = getArg("--position", "Associate Professor");
 const OUTPUT_FILE = getArg("--output", "");
+const ADMIN_PASSWORD = getArg("--admin-password", "");
+const AUTH_TOKEN = getArg("--auth-token", "");
 const DRY_RUN = args.includes("--dry-run");
+
+async function getWriteToken(): Promise<string> {
+  if (AUTH_TOKEN) return AUTH_TOKEN;
+  if (!ADMIN_PASSWORD) {
+    throw new Error("Upload requires --admin-password or --auth-token");
+  }
+
+  const res = await fetch(`${SITE_URL}/api/tenant/${TENANT_ID}/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ password: ADMIN_PASSWORD }),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Verify failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  if (data.role !== "admin" || !data.token) {
+    throw new Error("Provided credentials do not have admin access");
+  }
+
+  return data.token;
+}
 
 // --- ORCID Fetcher ---
 
@@ -318,9 +348,13 @@ async function main() {
   if (!DRY_RUN && facultyList.length > 0) {
     console.log(`\nUploading to ${SITE_URL}/api/data/${TENANT_ID} ...`);
     try {
+      const writeToken = await getWriteToken();
       const res = await fetch(`${SITE_URL}/api/data/${TENANT_ID}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${writeToken}`,
+        },
         body: JSON.stringify(facultyList),
       });
       if (res.ok) {

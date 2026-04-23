@@ -71,8 +71,8 @@ export interface ChatMessage {
 }
 
 export interface ChatRequest {
+  tenantId: string;
   query: string;
-  facultyList: Faculty[];
   history: ChatMessage[];
   lang: 'en' | 'ua';
 }
@@ -85,3 +85,5 @@ export interface TenantConfig {
   adminPasswordHash: string;
   viewPasswordHash?: string;
 }
+
+export type TenantRole = 'admin' | 'viewer';

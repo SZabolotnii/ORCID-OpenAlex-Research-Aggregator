@@ -1,14 +1,9 @@
 
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, MessageSquareText, FileBarChart, Plus, GraduationCap, X, BookOpen, MapPin, Globe, TrendingUp, Award, Tag, Building2, ExternalLink, Settings, Database, MousePointerClick, Search, Upload, Loader2, Save, FolderDown, FileSpreadsheet, Lock, LogOut, Shield, Eye } from 'lucide-react';
-import { Faculty, ApiKeys, DataSource, Publication } from './types';
-import { fetchOrcidData } from './services/orcidService';
-import { fetchOpenAlexMetrics } from './services/openAlexService';
-import { fetchScopusData } from './services/scopusService';
-import { fetchWosData } from './services/wosService';
-import { mergePublications } from './services/dataMergeService';
+import { Faculty, ApiKeys, Publication, TenantRole } from './types';
 import Dashboard from './components/Dashboard';
 import FacultyList from './components/FacultyList';
 import ChatInterface from './components/ChatInterface';
@@ -17,6 +12,9 @@ import PublicationDetailsModal from './components/PublicationDetailsModal';
 import ProfileModal from './components/ProfileModal';
 import OrcidSearch from './components/OrcidSearch';
 import { useLanguage } from './contexts/LanguageContext';
+import { buildFacultyRecord } from './services/facultyDataService';
+import { updateTenantPasswords, verifyTenantPassword } from './services/tenantApi';
+import { useTenantSession } from './hooks/useTenantSession';
 
 const NavLink = ({ to, icon: Icon, label }: { to: string, icon: any, label: string }) => {
   const location = useLocation();
@@ -55,18 +53,27 @@ const TENANT_ID = getTenantId();
 
 function App() {
   const { t, language, setLanguage } = useLanguage();
-  const [facultyList, setFacultyList] = useState<Faculty[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-  // Tenant config
-  const [tenantName, setTenantName] = useState('');
-  const [tenantPublic, setTenantPublic] = useState(true);
-  const [tenantHasAdmin, setTenantHasAdmin] = useState(false);
-  const [tenantAuthorized, setTenantAuthorized] = useState(true); // true until proven private
-
-  // Admin mode
-  const [isAdmin, setIsAdmin] = useState(false);
+  const {
+    tenantName,
+    tenantPublic,
+    tenantHasAdmin,
+    tenantAuthorized,
+    authToken,
+    isAdmin,
+    facultyList,
+    facultyListRef,
+    loadTenantDataFromServer,
+    persistFacultyList,
+    setFacultyList,
+    setTenantHasAdmin,
+    setTenantAuthorized,
+    storeAuthSession,
+    clearAuthSession,
+    saveApiKeys: saveApiKeysToStorage,
+    loadApiKeys,
+  } = useTenantSession(TENANT_ID);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -78,6 +85,18 @@ function App() {
   const [viewPassword, setViewPassword] = useState('');
   const [viewPasswordError, setViewPasswordError] = useState('');
 
+  const handleTenantLoginSuccess = async (role: TenantRole, token: string) => {
+    storeAuthSession(role, token);
+    setShowLoginModal(false);
+    setShowViewPasswordModal(false);
+    setLoginPassword('');
+    setLoginError('');
+    setViewPassword('');
+    setViewPasswordError('');
+    const data = await loadTenantDataFromServer(token);
+    setFacultyList(data);
+  };
+
   const handleAdminLogin = async () => {
     if (!tenantHasAdmin) {
       setShowSetPassword(true);
@@ -85,17 +104,9 @@ function App() {
       return;
     }
     try {
-      const res = await fetch(`/api/tenant/${TENANT_ID}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: loginPassword }),
-      });
-      const data = await res.json();
-      if (data.role === 'admin') {
-        setIsAdmin(true);
-        setShowLoginModal(false);
-        setLoginPassword('');
-        setLoginError('');
+      const data = await verifyTenantPassword(TENANT_ID, loginPassword);
+      if (data.role === 'admin' && data.token) {
+        await handleTenantLoginSuccess('admin', data.token);
       } else {
         setLoginError(t.wrongPassword);
       }
@@ -108,36 +119,33 @@ function App() {
     if (newPass.length < 4) { setSetPassError(t.passwordTooShort); return; }
     if (newPass !== confirmPass) { setSetPassError(t.passwordMismatch); return; }
     try {
-      await fetch(`/api/tenant/${TENANT_ID}/set-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminPassword: newPass }),
-      });
-      setIsAdmin(true);
+      await updateTenantPasswords(
+        TENANT_ID,
+        {
+          adminPassword: newPass,
+          currentAdminPassword: tenantHasAdmin ? loginPassword || viewPassword || undefined : undefined,
+        },
+        authToken
+      );
       setTenantHasAdmin(true);
       setShowSetPassword(false);
       setNewPass('');
       setConfirmPass('');
       setSetPassError('');
-    } catch {
-      setSetPassError('Connection error');
+      const data = await verifyTenantPassword(TENANT_ID, newPass);
+      if (data.role === 'admin' && data.token) {
+        await handleTenantLoginSuccess('admin', data.token);
+      }
+    } catch (error: any) {
+      setSetPassError(error?.message || 'Connection error');
     }
   };
 
   const handleViewPasswordSubmit = async () => {
     try {
-      const res = await fetch(`/api/tenant/${TENANT_ID}/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: viewPassword }),
-      });
-      const data = await res.json();
-      if (data.role === 'admin' || data.role === 'viewer') {
-        setTenantAuthorized(true);
-        setShowViewPasswordModal(false);
-        if (data.role === 'admin') setIsAdmin(true);
-        setViewPassword('');
-        setViewPasswordError('');
+      const data = await verifyTenantPassword(TENANT_ID, viewPassword);
+      if ((data.role === 'admin' || data.role === 'viewer') && data.token) {
+        await handleTenantLoginSuccess(data.role, data.token);
       } else {
         setViewPasswordError(t.wrongPassword);
       }
@@ -147,7 +155,14 @@ function App() {
   };
 
   const handleAdminLogout = () => {
-    setIsAdmin(false);
+    clearAuthSession();
+    if (tenantPublic) {
+      setTenantAuthorized(true);
+    } else {
+      setTenantAuthorized(false);
+      setFacultyList([]);
+      setShowViewPasswordModal(true);
+    }
   };
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
   const [selectedPublication, setSelectedPublication] = useState<Publication | null>(null);
@@ -177,127 +192,33 @@ function App() {
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number; name: string; errors: string[] } | null>(null);
   const [batchRunning, setBatchRunning] = useState(false);
 
-  // Persist data with safe parsing
-  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (!tenantPublic && !tenantAuthorized) {
+      setShowViewPasswordModal(true);
+    }
+  }, [tenantAuthorized, tenantPublic]);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        // 1. Load tenant config
-        const cfgRes = await fetch(`/api/tenant/${TENANT_ID}/config`);
-        if (cfgRes.ok) {
-          const cfg = await cfgRes.json();
-          setTenantName(cfg.name);
-          setTenantPublic(cfg.public);
-          setTenantHasAdmin(cfg.hasAdminPassword);
-          if (!cfg.public) {
-            // Private tenant — need password before showing data
-            setTenantAuthorized(false);
-            setShowViewPasswordModal(true);
-            return;
-          }
-        }
-
-        // 2. Try localStorage first (per-tenant key)
-        const storageKey = `faculty_data_${TENANT_ID}`;
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setFacultyList(parsed);
-            return;
-          }
-        }
-        // 3. Fallback: load from server
-        const res = await fetch(`/api/data/${TENANT_ID}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            setFacultyList(data);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to load data", e);
-      }
-    };
-    loadData();
     try {
-      const savedKeys = localStorage.getItem('api_keys');
+      const savedKeys = loadApiKeys();
       if (savedKeys) {
         setApiKeys(JSON.parse(savedKeys));
       }
     } catch (e) {
       console.error("Failed to parse API keys", e);
     }
-  }, []);
-
-  // Load data after private tenant authorization
-  useEffect(() => {
-    if (!tenantAuthorized || tenantPublic) return;
-    const loadAfterAuth = async () => {
-      try {
-        const res = await fetch(`/api/data/${TENANT_ID}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) setFacultyList(data);
-        }
-      } catch (e) {
-        console.error("Failed to load tenant data", e);
-      }
-    };
-    loadAfterAuth();
-  }, [tenantAuthorized, tenantPublic]);
-
-  useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
-    localStorage.setItem(`faculty_data_${TENANT_ID}`, JSON.stringify(facultyList));
-  }, [facultyList]);
+  }, [loadApiKeys]);
 
   const saveApiKeys = () => {
-    localStorage.setItem('api_keys', JSON.stringify(apiKeys));
+    saveApiKeysToStorage(JSON.stringify(apiKeys));
     setIsSettingsOpen(false);
   };
 
-  // Logic extracted to function for reuse in Search component
   const processAndAddFaculty = async (orcid: string, position: string, dept: string, institution?: string) => {
-    // 1. Fetch ORCID
-    let facultyData = await fetchOrcidData(orcid, position, dept);
-    
-    // 2. Fetch OpenAlex Metrics & Merge + OA enrichment
-    const metrics = await fetchOpenAlexMetrics(orcid);
-    if (metrics) {
-        facultyData.metrics = metrics;
-        // Enrich publications with OA status from OpenAlex topWorks (matched by DOI)
-        if (metrics.topWorks && metrics.topWorks.length > 0) {
-          const oaByDoi = new Map(metrics.topWorks.filter(w => w.doi).map(w => [w.doi.toLowerCase(), w.isOa]));
-          facultyData.publications = facultyData.publications.map(pub => {
-            if (pub.doi) {
-              const normalizedDoi = pub.doi.replace('https://doi.org/', '').toLowerCase();
-              const isOa = oaByDoi.get(normalizedDoi);
-              if (isOa !== undefined) return { ...pub, isOa };
-            }
-            return pub;
-          });
-        }
-    }
-
-    // 3. Fetch & Merge Scopus (Simulated or Real)
-    const scopusPubs = await fetchScopusData(orcid, apiKeys.scopus);
-    if (scopusPubs.length > 0) {
-      facultyData.publications = mergePublications(facultyData.publications, scopusPubs, 'scopus');
-    }
-
-    // 4. Fetch & Merge WoS (Simulated or Real)
-    const wosPubs = await fetchWosData(orcid, apiKeys.wos);
-    if (wosPubs.length > 0) {
-      facultyData.publications = mergePublications(facultyData.publications, wosPubs, 'wos');
-    }
-
-    if (institution) facultyData.institution = institution;
-    setFacultyList(prev => [...prev, facultyData]);
+    const facultyData = await buildFacultyRecord(orcid, position, dept, apiKeys, institution);
+    const nextFacultyList = [...facultyListRef.current, facultyData];
+    setFacultyList(nextFacultyList);
+    await persistFacultyList(nextFacultyList);
   };
 
   const handleAddFaculty = async (e: React.FormEvent) => {
@@ -309,7 +230,7 @@ function App() {
        return;
     }
 
-    if (facultyList.find(f => f.orcidId === newOrcid)) {
+    if (facultyListRef.current.find(f => f.orcidId === newOrcid)) {
         setErrorAdd("Faculty member already exists.");
         return;
     }
@@ -333,42 +254,27 @@ function App() {
 
   const handleDelete = (id: string) => {
     if(confirm(t.confirmDelete)) {
-        setFacultyList(prev => prev.filter(f => f.orcidId !== id));
+        const nextFacultyList = facultyListRef.current.filter(f => f.orcidId !== id);
+        setFacultyList(nextFacultyList);
+        persistFacultyList(nextFacultyList).catch((error) => {
+          console.error(error);
+          alert(error.message || 'Failed to save data');
+        });
         if (selectedFaculty?.orcidId === id) setSelectedFaculty(null);
     }
   };
 
   const handleRefreshFaculty = async (orcidId: string) => {
-    const existing = facultyList.find(f => f.orcidId === orcidId);
+    const existing = facultyListRef.current.find(f => f.orcidId === orcidId);
     if (!existing) return;
-
-    let facultyData = await fetchOrcidData(orcidId, existing.position, existing.department);
-    const metrics = await fetchOpenAlexMetrics(orcidId);
-    if (metrics) {
-      facultyData.metrics = metrics;
-      if (metrics.topWorks && metrics.topWorks.length > 0) {
-        const oaByDoi = new Map(metrics.topWorks.filter(w => w.doi).map(w => [w.doi.toLowerCase(), w.isOa]));
-        facultyData.publications = facultyData.publications.map(pub => {
-          if (pub.doi) {
-            const normalizedDoi = pub.doi.replace('https://doi.org/', '').toLowerCase();
-            const isOa = oaByDoi.get(normalizedDoi);
-            if (isOa !== undefined) return { ...pub, isOa };
-          }
-          return pub;
-        });
-      }
-    }
-
-    const scopusPubs = await fetchScopusData(orcidId, apiKeys.scopus);
-    if (scopusPubs.length > 0) {
-      facultyData.publications = mergePublications(facultyData.publications, scopusPubs, 'scopus');
-    }
-    const wosPubs = await fetchWosData(orcidId, apiKeys.wos);
-    if (wosPubs.length > 0) {
-      facultyData.publications = mergePublications(facultyData.publications, wosPubs, 'wos');
-    }
-
-    setFacultyList(prev => prev.map(f => f.orcidId === orcidId ? { ...facultyData, position: existing.position, department: existing.department } : f));
+    const refreshedFaculty = await buildFacultyRecord(orcidId, existing.position, existing.department, apiKeys, existing.institution);
+    const nextFacultyList = facultyListRef.current.map(f =>
+      f.orcidId === orcidId
+        ? { ...refreshedFaculty, position: existing.position, department: existing.department, institution: existing.institution }
+        : f
+    );
+    setFacultyList(nextFacultyList);
+    await persistFacultyList(nextFacultyList);
   };
 
   const handleEditFaculty = (faculty: Faculty) => {
@@ -379,23 +285,35 @@ function App() {
   };
 
   const handleBulkDelete = (ids: string[]) => {
-    setFacultyList(prev => prev.filter(f => !ids.includes(f.orcidId)));
+    const nextFacultyList = facultyListRef.current.filter(f => !ids.includes(f.orcidId));
+    setFacultyList(nextFacultyList);
+    persistFacultyList(nextFacultyList).catch((error) => {
+      console.error(error);
+      alert(error.message || 'Failed to save data');
+    });
     if (selectedFaculty && ids.includes(selectedFaculty.orcidId)) setSelectedFaculty(null);
   };
 
   const handleBulkUpdate = (ids: string[], field: 'department' | 'position' | 'institution', value: string) => {
-    setFacultyList(prev => prev.map(f =>
+    const nextFacultyList = facultyListRef.current.map(f =>
       ids.includes(f.orcidId) ? { ...f, [field]: value } : f
-    ));
+    );
+    setFacultyList(nextFacultyList);
+    persistFacultyList(nextFacultyList).catch((error) => {
+      console.error(error);
+      alert(error.message || 'Failed to save data');
+    });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingFaculty) return;
-    setFacultyList(prev => prev.map(f =>
+    const nextFacultyList = facultyListRef.current.map(f =>
       f.orcidId === editingFaculty.orcidId
         ? { ...f, position: editPosition, institution: editInstitution, department: editDept }
         : f
-    ));
+    );
+    setFacultyList(nextFacultyList);
+    await persistFacultyList(nextFacultyList);
     setEditingFaculty(null);
   };
 
@@ -421,7 +339,7 @@ function App() {
         setBatchProgress({ current: i + 1, total, name: orcid, errors: [...errors] });
         continue;
       }
-      if (facultyList.find(f => f.orcidId === orcid)) {
+      if (facultyListRef.current.find(f => f.orcidId === orcid)) {
         setBatchProgress({ current: i + 1, total, name: `${orcid} (skip)`, errors: [...errors] });
         continue;
       }
@@ -469,6 +387,7 @@ function App() {
         const data = JSON.parse(text);
         if (Array.isArray(data) && data.length > 0 && data[0].orcidId) {
           setFacultyList(data);
+          await persistFacultyList(data);
           alert(t.dataLoaded + ` (${data.length})`);
         } else {
           alert('Invalid JSON format');
@@ -626,7 +545,7 @@ function App() {
 
              <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
                  <h4 className="font-semibold text-slate-800 text-sm mb-1">{t.mvpVersion}</h4>
-                 <p className="text-xs text-slate-500">{t.localData}</p>
+                 <p className="text-xs text-slate-500">Server-backed tenant data</p>
              </div>
           </div>
         </aside>
@@ -692,8 +611,8 @@ function App() {
                   />
                 } 
               />
-              <Route path="/chat" element={<ChatInterface facultyList={facultyList} />} />
-              <Route path="/reports" element={<ReportGenerator facultyList={facultyList} />} />
+              <Route path="/chat" element={<ChatInterface tenantId={TENANT_ID} authToken={authToken} />} />
+              <Route path="/reports" element={<ReportGenerator facultyList={facultyList} tenantId={TENANT_ID} authToken={authToken} />} />
             </Routes>
           </div>
         </main>
