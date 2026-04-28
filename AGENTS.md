@@ -48,6 +48,8 @@ npx tsx scripts/import-csv.ts <csv-file> --tenant <id> --institution "Name"
 - `OPENROUTER_HTTP_REFERER` — optional attribution header for OpenRouter
 - `OPENROUTER_APP_TITLE` — optional attribution title for OpenRouter
 - `AUTH_TOKEN_SECRET` — token signing secret for tenant auth sessions
+- `SCOPUS_API_KEY` — Elsevier API key for Scopus enrichment (`/api/enrichment/scopus` returns 503 if unset)
+- `SCOPUS_REFERER` — `Referer` header sent to Elsevier; must match the URL the key is registered to (default: `https://orcid-csbc.szabolotnii.site/`)
 - `PORT` — server port (default: 3001)
 - `DATA_DIR` — data storage directory (default: /opt/orcid-tracker-api/data)
 
@@ -60,6 +62,7 @@ VPS (srv1437773.hstgr.cloud):
 │   └── /api/* → Node.js backend (port 3001)
 ├── Node.js backend (pi-agent-core + Express)
 │   ├── /api/chat — AI agent with 7 research tools
+│   ├── /api/enrichment/scopus — admin-only Scopus search proxy (domain-locked Elsevier key)
 │   ├── /api/data/:tenantId — per-tenant faculty data
 │   ├── /api/tenant/:id/config — tenant configuration
 │   └── /api/tenant/:id/verify — server-side auth
@@ -86,13 +89,15 @@ VPS (srv1437773.hstgr.cloud):
 - `orcidService.ts` — ORCID Public API. Fetches profiles and publications.
 - `openAlexService.ts` — OpenAlex API. Fetches h-index, citations, topics, yearly trends. `cited_by_count` and `works_count` read from top-level response (not `summary_stats`).
 - `dataMergeService.ts` — Multi-source publication deduplication (DOI → title+year → metadata merge).
-- `scopusService.ts` / `wosService.ts` — Return simulated data unless real API keys provided.
+- `scopusService.ts` — thin proxy to `/api/enrichment/scopus`; the Elsevier key never reaches the browser. Returns `[]` on any failure.
+- `wosService.ts` — Returns simulated data unless a real WoS key is provided (still frontend-only).
 
 **Backend** (`server/src/`):
 - `index.ts` — Express API with tenant management, data persistence, AI chat endpoint.
 - `agent.ts` — pi-agent configuration: system prompt with full faculty context snapshot, 7 custom research tools, aggregate statistics.
 - `tools.ts` — Tool implementations: `query_faculty_rankings`, `search_local_publications`, `get_department_comparison`, `get_faculty_detail`, `get_author_metrics_live`, `search_global_works`, `get_current_date`.
 - `llmProvider.ts` — backend LLM resolver for Gemini/OpenRouter, including OpenRouter free-model discovery and per-use-case overrides
+- `scopusService.ts` — Scopus search proxy: sends `X-ELS-APIKey` + `Referer` to api.elsevier.com, normalizes results into `Publication[]`. Tries `ORCID()` first; falls back to `AU-ID(scopusAuthorId)` when ORCID query returns 0 and the request supplied an author ID. Pages at 25/request (Scopus free-tier cap). Throws `ScopusConfigError` (→ 503) when key is missing.
 - `types.ts` — Shared types (Faculty, Publication, TenantConfig, etc.)
 
 **Bilingual support** (EN/UA): `contexts/LanguageContext.tsx` + `utils/translations.ts`.

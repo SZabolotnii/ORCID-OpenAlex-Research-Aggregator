@@ -162,13 +162,14 @@ function App() {
   };
   const [selectedFaculty, setSelectedFaculty] = useState<Faculty | null>(null);
   const [selectedPublication, setSelectedPublication] = useState<Publication | null>(null);
-  const [apiKeys, setApiKeys] = useState<ApiKeys>({ scopus: '', wos: '' });
+  const [apiKeys, setApiKeys] = useState<ApiKeys>({ wos: '' });
   
   // Add Faculty Form State
   const [newOrcid, setNewOrcid] = useState('');
   const [newPosition, setNewPosition] = useState('Associate Professor');
   const [newInstitution, setNewInstitution] = useState('');
   const [newDept, setNewDept] = useState('');
+  const [newScopusAuthorId, setNewScopusAuthorId] = useState('');
   const [loadingAdd, setLoadingAdd] = useState(false);
   const [addStage, setAddStage] = useState(''); // '' | 'ORCID' | 'OPENALEX' | 'SCOPUS' | 'WOS'
   const [errorAdd, setErrorAdd] = useState('');
@@ -178,6 +179,7 @@ function App() {
   const [editPosition, setEditPosition] = useState('');
   const [editInstitution, setEditInstitution] = useState('');
   const [editDept, setEditDept] = useState('');
+  const [editScopusAuthorId, setEditScopusAuthorId] = useState('');
 
   // Batch Import State
   const [isBatchImporting, setIsBatchImporting] = useState(false);
@@ -210,8 +212,20 @@ function App() {
     setIsSettingsOpen(false);
   };
 
-  const processAndAddFaculty = async (orcid: string, position: string, dept: string, institution?: string) => {
-    const facultyData = await buildFacultyRecord(orcid, position, dept, apiKeys, institution);
+  const processAndAddFaculty = async (
+    orcid: string,
+    position: string,
+    dept: string,
+    institution?: string,
+    scopusAuthorId?: string,
+  ) => {
+    const facultyData = await buildFacultyRecord(
+      orcid,
+      position,
+      dept,
+      { tenantId: TENANT_ID, authToken, wosApiKey: apiKeys.wos, scopusAuthorId },
+      institution,
+    );
     const nextFacultyList = [...facultyListRef.current, facultyData];
     setFacultyList(nextFacultyList);
     await persistFacultyList(nextFacultyList);
@@ -231,13 +245,26 @@ function App() {
         return;
     }
 
+    const trimmedScopusAuthorId = newScopusAuthorId.trim();
+    if (trimmedScopusAuthorId && !/^\d{6,15}$/.test(trimmedScopusAuthorId)) {
+      setErrorAdd("Scopus Author ID must be 6–15 digits.");
+      return;
+    }
+
     setLoadingAdd(true);
     setAddStage('ORCID');
     setErrorAdd('');
     try {
-      await processAndAddFaculty(newOrcid, newPosition, newDept, newInstitution);
+      await processAndAddFaculty(
+        newOrcid,
+        newPosition,
+        newDept,
+        newInstitution,
+        trimmedScopusAuthorId || undefined,
+      );
       setNewOrcid('');
       setNewDept('');
+      setNewScopusAuthorId('');
       setIsAdding(false);
     } catch (err) {
       console.error(err);
@@ -263,10 +290,27 @@ function App() {
   const handleRefreshFaculty = async (orcidId: string) => {
     const existing = facultyListRef.current.find(f => f.orcidId === orcidId);
     if (!existing) return;
-    const refreshedFaculty = await buildFacultyRecord(orcidId, existing.position, existing.department, apiKeys, existing.institution);
+    const refreshedFaculty = await buildFacultyRecord(
+      orcidId,
+      existing.position,
+      existing.department,
+      {
+        tenantId: TENANT_ID,
+        authToken,
+        wosApiKey: apiKeys.wos,
+        scopusAuthorId: existing.scopusAuthorId,
+      },
+      existing.institution,
+    );
     const nextFacultyList = facultyListRef.current.map(f =>
       f.orcidId === orcidId
-        ? { ...refreshedFaculty, position: existing.position, department: existing.department, institution: existing.institution }
+        ? {
+            ...refreshedFaculty,
+            position: existing.position,
+            department: existing.department,
+            institution: existing.institution,
+            scopusAuthorId: existing.scopusAuthorId,
+          }
         : f
     );
     setFacultyList(nextFacultyList);
@@ -278,6 +322,7 @@ function App() {
     setEditPosition(faculty.position);
     setEditInstitution(faculty.institution || '');
     setEditDept(faculty.department);
+    setEditScopusAuthorId(faculty.scopusAuthorId || '');
   };
 
   const handleBulkDelete = (ids: string[]) => {
@@ -303,9 +348,20 @@ function App() {
 
   const handleSaveEdit = async () => {
     if (!editingFaculty) return;
+    const trimmedScopusAuthorId = editScopusAuthorId.trim();
+    if (trimmedScopusAuthorId && !/^\d{6,15}$/.test(trimmedScopusAuthorId)) {
+      alert('Scopus Author ID must be 6–15 digits.');
+      return;
+    }
     const nextFacultyList = facultyListRef.current.map(f =>
       f.orcidId === editingFaculty.orcidId
-        ? { ...f, position: editPosition, institution: editInstitution, department: editDept }
+        ? {
+            ...f,
+            position: editPosition,
+            institution: editInstitution,
+            department: editDept,
+            scopusAuthorId: trimmedScopusAuthorId || undefined,
+          }
         : f
     );
     setFacultyList(nextFacultyList);
@@ -634,6 +690,8 @@ function App() {
           setNewDept={setNewDept}
           newPosition={newPosition}
           setNewPosition={setNewPosition}
+          newScopusAuthorId={newScopusAuthorId}
+          setNewScopusAuthorId={setNewScopusAuthorId}
           loadingAdd={loadingAdd}
           addStage={addStage}
           errorAdd={errorAdd}
@@ -646,6 +704,8 @@ function App() {
           setEditDept={setEditDept}
           editPosition={editPosition}
           setEditPosition={setEditPosition}
+          editScopusAuthorId={editScopusAuthorId}
+          setEditScopusAuthorId={setEditScopusAuthorId}
           handleSaveEdit={handleSaveEdit}
           isBatchImporting={isBatchImporting}
           setIsBatchImporting={setIsBatchImporting}

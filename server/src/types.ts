@@ -61,6 +61,7 @@ export interface Faculty {
   publications: Publication[];
   metrics?: OpenAlexMetrics;
   lastUpdated: string;
+  scopusAuthorId?: string;
 }
 
 export interface ChatMessage {

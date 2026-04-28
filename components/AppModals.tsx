@@ -29,6 +29,8 @@ type AppModalsProps = {
   setNewDept: (value: string) => void;
   newPosition: string;
   setNewPosition: (value: string) => void;
+  newScopusAuthorId: string;
+  setNewScopusAuthorId: (value: string) => void;
   loadingAdd: boolean;
   addStage: string;
   errorAdd: string;
@@ -41,6 +43,8 @@ type AppModalsProps = {
   setEditDept: (value: string) => void;
   editPosition: string;
   setEditPosition: (value: string) => void;
+  editScopusAuthorId: string;
+  setEditScopusAuthorId: (value: string) => void;
   handleSaveEdit: () => Promise<void>;
   isBatchImporting: boolean;
   setIsBatchImporting: (open: boolean) => void;
@@ -98,6 +102,8 @@ export default function AppModals({
   setNewDept,
   newPosition,
   setNewPosition,
+  newScopusAuthorId,
+  setNewScopusAuthorId,
   loadingAdd,
   addStage,
   errorAdd,
@@ -110,6 +116,8 @@ export default function AppModals({
   setEditDept,
   editPosition,
   setEditPosition,
+  editScopusAuthorId,
+  setEditScopusAuthorId,
   handleSaveEdit,
   isBatchImporting,
   setIsBatchImporting,
@@ -168,16 +176,6 @@ export default function AppModals({
               <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-slate-500">
                 {t.enterKeys}
               </p>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Scopus API Key</label>
-                <input
-                  type="password"
-                  value={apiKeys.scopus}
-                  onChange={(e) => setApiKeys((prev) => ({ ...prev, scopus: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter Elsevier Key..."
-                />
-              </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
                   Web of Science API Key
@@ -261,6 +259,23 @@ export default function AppModals({
                     ))}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Scopus Author ID
+                  <span className="ml-1 font-normal text-slate-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={newScopusAuthorId}
+                  onChange={(e) => setNewScopusAuthorId(e.target.value)}
+                  placeholder="e.g. 7402478706"
+                  inputMode="numeric"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Used as a fallback when ORCID is not linked to a Scopus profile.
+                </p>
               </div>
               {errorAdd && (
                 <div className="rounded border border-red-100 bg-red-50 p-2 text-sm text-red-600">
@@ -348,6 +363,23 @@ export default function AppModals({
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">
+                  Scopus Author ID
+                  <span className="ml-1 font-normal text-slate-400">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={editScopusAuthorId}
+                  onChange={(e) => setEditScopusAuthorId(e.target.value)}
+                  placeholder="e.g. 7402478706"
+                  inputMode="numeric"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Used as a fallback when ORCID is not linked to a Scopus profile.
+                </p>
               </div>
               <button
                 onClick={handleSaveEdit}

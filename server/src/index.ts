@@ -7,6 +7,7 @@ import { Agent } from "@mariozechner/pi-agent-core";
 import { buildSystemPrompt, createTools } from "./agent.js";
 import { getChatModel, getResolvedLlmSummary } from "./llmProvider.js";
 import { generateReport, fillTemplate } from "./reportService.js";
+import { searchScopusForAuthor, ScopusConfigError, ScopusUpstreamError } from "./scopusService.js";
 import type { ChatRequest, Faculty, TenantConfig, TenantRole } from "./types.js";
 
 const DATA_DIR = process.env.DATA_DIR || "/opt/orcid-tracker-api/data";
@@ -430,6 +431,70 @@ app.post("/api/reports/generate", reportLimiter, async (req, res) => {
   } catch (error: any) {
     console.error("Report endpoint error:", error);
     res.status(500).json({ error: error.message || "Report generation failed" });
+  }
+});
+
+// --- External enrichment proxies ---
+
+const scopusLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many Scopus requests. Please wait." },
+});
+
+app.post("/api/enrichment/scopus", scopusLimiter, async (req, res) => {
+  const { tenantId, orcidId, scopusAuthorId } = req.body ?? {};
+
+  if (!tenantId || typeof tenantId !== "string") {
+    res.status(400).json({ error: "Missing tenantId" });
+    return;
+  }
+  if (!orcidId || typeof orcidId !== "string" || !/^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/.test(orcidId)) {
+    res.status(400).json({ error: "Invalid orcidId" });
+    return;
+  }
+  let normalizedScopusAuthorId: string | undefined;
+  if (scopusAuthorId !== undefined && scopusAuthorId !== null && scopusAuthorId !== "") {
+    if (typeof scopusAuthorId !== "string" || !/^\d{6,15}$/.test(scopusAuthorId.trim())) {
+      res.status(400).json({ error: "Invalid scopusAuthorId" });
+      return;
+    }
+    normalizedScopusAuthorId = scopusAuthorId.trim();
+  }
+
+  try {
+    sanitizeTenantId(tenantId);
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+    return;
+  }
+
+  const tenant = requireTenant(req, res, tenantId);
+  if (!tenant) return;
+
+  const auth = getAuthContext(req);
+  if (!hasTenantAdminAccess(auth, tenantId)) {
+    res.status(401).json({ error: "Admin authentication required" });
+    return;
+  }
+
+  try {
+    const publications = await searchScopusForAuthor(orcidId, normalizedScopusAuthorId);
+    res.json({ status: "ok", publications });
+  } catch (error: any) {
+    if (error instanceof ScopusConfigError) {
+      res.status(503).json({ error: "Scopus integration not configured" });
+      return;
+    }
+    if (error instanceof ScopusUpstreamError) {
+      console.error("[scopus] upstream error:", error.message);
+      res.status(502).json({ error: "Scopus upstream error", details: error.message });
+      return;
+    }
+    console.error("[scopus] unexpected error:", error);
+    res.status(500).json({ error: error?.message || "Scopus request failed" });
   }
 });
 

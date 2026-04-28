@@ -9,7 +9,12 @@ export async function buildFacultyRecord(
   orcid: string,
   position: string,
   dept: string,
-  apiKeys: { scopus?: string; wos?: string },
+  enrichment: {
+    tenantId: string;
+    authToken: string | null;
+    wosApiKey?: string;
+    scopusAuthorId?: string;
+  },
   institution?: string
 ): Promise<Faculty> {
   const facultyData = await fetchOrcidData(orcid, position, dept);
@@ -32,16 +37,22 @@ export async function buildFacultyRecord(
     }
   }
 
-  const scopusPubs = await fetchScopusData(orcid, apiKeys.scopus);
+  const scopusPubs = await fetchScopusData(
+    orcid,
+    enrichment.tenantId,
+    enrichment.authToken,
+    enrichment.scopusAuthorId,
+  );
   if (scopusPubs.length > 0) {
     facultyData.publications = mergePublications(facultyData.publications, scopusPubs, 'scopus');
   }
 
-  const wosPubs = await fetchWosData(orcid, apiKeys.wos);
+  const wosPubs = await fetchWosData(orcid, enrichment.wosApiKey);
   if (wosPubs.length > 0) {
     facultyData.publications = mergePublications(facultyData.publications, wosPubs, 'wos');
   }
 
   if (institution) facultyData.institution = institution;
+  if (enrichment.scopusAuthorId) facultyData.scopusAuthorId = enrichment.scopusAuthorId;
   return facultyData;
 }

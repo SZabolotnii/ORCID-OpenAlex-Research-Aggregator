@@ -60,6 +60,9 @@ export interface Faculty {
   publications: Publication[];
   metrics?: OpenAlexMetrics;
   lastUpdated: string;
+  // Optional Scopus Author ID — used as fallback when the author hasn't linked
+  // their ORCID to a Scopus profile (Scopus then returns 0 for ORCID() queries).
+  scopusAuthorId?: string;
 }
 
 export interface ChatMessage {
@@ -79,7 +82,6 @@ export interface ReportConfig {
 }
 
 export interface ApiKeys {
-  scopus?: string;
   wos?: string;
 }
 
