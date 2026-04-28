@@ -149,6 +149,11 @@ function requireTenant(req: express.Request, res: express.Response, tenantId: st
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Trust the first hop (Caddy) so req.ip resolves to the real client address
+// for express-rate-limit. Without this, the limiter sees Caddy's IP for every
+// request and ERR_ERL_UNEXPECTED_X_FORWARDED_FOR is thrown.
+app.set("trust proxy", 1);
+
 // Allow requests from the production domain, any subdomains, and localhost for dev
 const allowedOrigins = /^(https?:\/\/localhost(:\d+)?|https?:\/\/.*\.szabolotnii\.site)$/;
 app.use(cors({ origin: allowedOrigins }));
