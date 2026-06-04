@@ -1,0 +1,115 @@
+\begin{thebibliography}{10}
+
+\bibitem{OpenAlex2024Docs}
+{OpenAlex}.
+\newblock Openalex documentation, 2024.
+\newblock Accessed 2026-03-07.
+
+\bibitem{Bryant2017RIMDefining}
+Rebecca Bryant, Andrew Clements, Chad Feltes, David Groenewegen, Stefan Huber, Regina Merz, et~al.
+\newblock Research information management: Defining rim and the library's role, 2017.
+
+\bibitem{Wang2024SurveyLLMAgents}
+Lei Wang, Chao Ma, Xinfeng Feng, Zhi Zhang, Haipeng Yang, Jie Zhang, and Jun Wang.
+\newblock A survey on large language model based autonomous agents.
+\newblock {\em Frontiers of Computer Science}, 18(6):186345, 2024.
+
+\bibitem{Xi2023RisePotentialAgents}
+Zhiheng Xi, Wen Chen, Xue Guo, Weijia He, Yifan Ding, Bin Hong, Tao Gui, et~al.
+\newblock The rise and potential of large language model based agents: A survey.
+\newblock arXiv:2309.07864, 2023.
+
+\bibitem{Anthropic2024MCP}
+{Anthropic}.
+\newblock Model context protocol specification, 2024.
+\newblock Accessed 2026-03-07.
+
+\bibitem{OpenAIRE2023GuidelinesCRIS}
+{OpenAIRE}.
+\newblock Openaire guidelines for cris managers v1.2.0, 2023.
+\newblock Accessed 2026-03-07.
+
+\bibitem{Dunleavy2006DigitalEraGovernance}
+Patrick Dunleavy, Helen Margetts, Simon Bastow, and Jane Tinkler.
+\newblock {\em Digital Era Governance: IT Corporations, the State, and E-Government}.
+\newblock Oxford University Press, 2006.
+
+\bibitem{GeorgiaState2019StudentSuccessPredictive}
+{Georgia State University}.
+\newblock Student success programs: Predictive analytics and proactive advising, 2019.
+\newblock GSU Office of Institutional Research.
+
+\bibitem{Jisc2023DigitalTransformationFramework}
+{Jisc}.
+\newblock Digital transformation framework for higher education, 2023.
+\newblock Accessed 2026-03-07.
+
+\bibitem{Hevner2004DSR}
+Alan~R. Hevner, Salvatore~T. March, Jinsoo Park, and Sudha Ram.
+\newblock Design science in information systems research.
+\newblock {\em MIS Quarterly}, 28(1):75--105, 2004.
+
+\bibitem{Peffers2007DSRMeth}
+Ken Peffers, Tuure Tuunanen, Marcus~A. Rothenberger, and Samir Chatterjee.
+\newblock A design science research methodology for information systems research.
+\newblock {\em Journal of Management Information Systems}, 24(3):45--77, 2007.
+
+\bibitem{Gregor2013PositioningDSR}
+Shirley Gregor and Alan~R. Hevner.
+\newblock Positioning and presenting design science research for maximum impact.
+\newblock {\em MIS Quarterly}, 37(2):337--355, 2013.
+
+\bibitem{ORCID2024APIDocs}
+{ORCID}.
+\newblock Orcid api v3.0 documentation, 2024.
+\newblock Accessed 2026-03-07.
+
+\bibitem{Priem2022OpenAlex}
+Jason Priem, Heather Piwowar, and Richard Orr.
+\newblock Openalex: A fully-open index of scholarly works, authors, venues, institutions, and concepts.
+\newblock arXiv:2205.01833, 2022.
+
+\bibitem{MONUkraine2023ProfessionalJournalsOrder}
+Pro zatverdzhennia poriadku formuvannia pereliku naukovykh fakhovykh vydan ukrainy, 2023.
+\newblock Order of the Ministry of Education and Science of Ukraine No. 886 (original title in Ukrainian).
+
+\bibitem{euroCRIS2024CERIF}
+{euroCRIS}.
+\newblock Cerif --- common european research information format, 2024.
+\newblock Accessed 2026-03-07.
+
+\bibitem{Lopez2015GROBID}
+Patrice Lopez and Laurent Romary.
+\newblock Grobid: Combining automatic bibliographic data recognition and term extraction for scholarship publications.
+\newblock In {\em International Conference on Theory and Practice of Digital Libraries}, pages 473--474, 2015.
+
+\bibitem{Aria2017bibliometrix}
+Massimo Aria and Corrado Cuccurullo.
+\newblock bibliometrix: An r-tool for comprehensive science mapping analysis.
+\newblock {\em Journal of Informetrics}, 11(4):959--975, 2017.
+
+\bibitem{Grootendorst2022BERTopic}
+Maarten Grootendorst.
+\newblock Bertopic: Neural topic modeling with a class-based tf-idf procedure.
+\newblock arXiv:2203.05794, 2022.
+
+\bibitem{ODonoghue2023PaperQA}
+Odhran O{'}Donoghue, Aleksandar Shtedritski, Sam Cox, Samuel~G. Rodriques, and Andrew~D. White.
+\newblock Paperqa: Retrieval-augmented generative agent for scientific research.
+\newblock arXiv:2312.07559, 2023.
+
+\bibitem{Chelli2024HallucinationRates}
+Mika{"e}l Chelli et~al.
+\newblock Hallucination rates and reference accuracy of chatgpt and bard for systematic reviews: Comparative analysis.
+\newblock {\em Journal of Medical Internet Research}, 2024.
+\newblock PubMed: 38776130.
+
+\bibitem{EDPB2024Opinion28}
+{European Data Protection Board}.
+\newblock Opinion 28/2024 on certain data protection aspects related to the processing of personal data in the context of ai models, 2024.
+
+\bibitem{EU2024AIAct}
+{European Union}.
+\newblock Regulation (eu) 2024/1689 laying down harmonised rules on artificial intelligence (ai act), 2024.
+
+\end{thebibliography}

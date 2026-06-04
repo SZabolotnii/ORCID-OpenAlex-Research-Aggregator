@@ -1,4 +1,4 @@
-import { Faculty } from '../types';
+import { Faculty, Publication } from '../types';
 import { fetchOrcidData } from './orcidService';
 import { fetchOpenAlexMetrics } from './openAlexService';
 import { fetchScopusData } from './scopusService';
@@ -34,6 +34,27 @@ export async function buildFacultyRecord(
         }
         return pub;
       });
+    }
+
+    // Fold OpenAlex works into the publication set through the Golden Record
+    // engine, so OpenAlex-only works appear and cross-source duplicates collapse
+    // (previously OpenAlex was used for metrics enrichment only).
+    if (metrics.topWorks && metrics.topWorks.length > 0) {
+      const oaPubs: Publication[] = metrics.topWorks
+        .filter((w) => w.title)
+        .map((w, i) => ({
+          title: w.title,
+          year: w.year || 0,
+          journal: w.journal && w.journal !== 'N/A' ? w.journal : null,
+          type: 'journal-article',
+          doi: w.doi || null,
+          url: null,
+          putCode: `openalex:${w.doi || w.title.slice(0, 40)}-${i}`,
+          sources: ['openalex'],
+          citationCount: w.citations,
+          isOa: w.isOa,
+        }));
+      facultyData.publications = mergePublications(facultyData.publications, oaPubs, 'openalex');
     }
   }
 

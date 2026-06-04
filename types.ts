@@ -14,6 +14,19 @@ export interface Publication {
   authors?: string[]; // List of author names
   abstract?: string; // Paper abstract
   isOa?: boolean; // Open Access status from OpenAlex
+  provenance?: Provenance; // Golden Record fusion provenance (which source won each field)
+}
+
+/**
+ * Provenance metadata attached to a fused Golden Record, recording how the
+ * unified record was assembled from multiple sources (W3C PROV-inspired).
+ */
+export interface Provenance {
+  sources: DataSource[]; // all sources that contributed to this record
+  fieldSources?: Partial<Record<string, DataSource>>; // which source won each fused field
+  matchScore?: number; // max pairwise score at which records were merged into this cluster
+  reviewFlag?: boolean; // true if any contributing merge fell in the HITL review band
+  clusterSize?: number; // number of raw records fused into this Golden Record
 }
 
 export interface OpenAlexTopic {

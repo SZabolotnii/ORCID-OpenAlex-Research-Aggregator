@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "smoke": "node scripts/smoke-check.mjs",
+    "benchmark": "npx tsx scripts/synthetic-benchmark.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx"
   },

@@ -1,0 +1,180 @@
+\section*{ДОДАТКИ}
+
+\subsection*{Додаток A. Псевдокод алгоритмів (розділ 4)}
+
+\begin{lstlisting}[caption={Нормалізація DOI (\texttt{normalize\_doi})},label={lst:a-normalize-doi}]
+normalize_doi(doi):
+    doi = lowercase(doi)
+    doi = remove_prefixes(doi, ["https://doi.org/", "dx.doi.org/"])
+    doi = rstrip(doi)
+    assert matches_regex(doi, r"^10\.\d{4,9}/.+$")
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Первинний матчинг за DOI (\texttt{primary\_match})},label={lst:a-primary-match}]
+primary_match(new_pub, existing_pubs):
+    IF new_pub.doi EXISTS AND is_valid(new_pub.doi):
+        normalized = normalize_doi(new_pub.doi)
+        FOR each existing IN existing_pubs:
+            IF normalize_doi(existing.doi) == normalized:
+                RETURN existing.index
+    RETURN -1  // Немає збігу
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Вторинний матчинг за Title+Year (\texttt{secondary\_match})},label={lst:a-secondary-match}]
+secondary_match(new_pub, existing_pubs):
+    normalized_title = normalize_title(new_pub.title)
+    FOR each existing IN existing_pubs:
+        IF similarity(normalized_title, normalize_title(existing.title)) > 0.9:
+            IF new_pub.year == existing.year:
+                RETURN existing.index
+    RETURN -1
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Нормалізація назви (\texttt{normalize\_title})},label={lst:a-normalize-title}]
+normalize_title(title):
+    title = lowercase(title)
+    title = remove_punctuation(title)
+    title = remove_stopwords(title)
+    title = stem_or_lemmatize(title)
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Злиття метаданих (\texttt{merge})},label={lst:a-merge}]
+merge(existing, new_pub):
+    // Citation count: максимум
+    existing.citations = MAX(existing.citations, new_pub.citations)
+
+    // DOI: заповнити якщо відсутній
+    IF existing.doi IS NULL AND new_pub.doi EXISTS:
+        existing.doi = new_pub.doi
+
+    // Open Access: оптимістичний підхід
+    IF new_pub.is_open_access == TRUE:
+        existing.is_open_access = TRUE
+
+    // Keywords: об'єднання унікальних
+    existing.keywords = UNION(existing.keywords, new_pub.keywords)
+
+    // Sources: трекінг походження
+    existing.sources.ADD(new_pub.source)
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Трекінг провенансу (структури \texttt{sources}/\texttt{last\_updated})},label={lst:a-provenance}]
+sources: ['orcid', 'openalex', 'scopus']
+last_updated: {
+    'orcid': '2024-01-15',
+    'openalex': '2024-01-20',
+    'scopus': '2024-01-10'
+}
+\end{lstlisting}
+
+\subsection*{Додаток B. Приклади коду та журнали виконання (розділ 5)}
+
+\begin{lstlisting}[language=Java,caption={Декларація tools для MCP Function Calling (TypeScript)},label={lst:b-tools}]
+const tools = [
+  {
+    name: "get_author_metrics",
+    description: "Отримати детальні метрики для дослідника: h-index, \n                  кількість цитувань, тренди публікацій, найкращі роботи",
+    parameters: {
+      type: "object",
+      properties: {
+        orcid: {
+          type: "string",
+          description: "ORCID iD (наприклад, 0000-0003-0242-2234)"
+        }
+      },
+      required: ["orcid"]
+    }
+  },
+  {
+    name: "search_scientific_works",
+    description: "Пошук наукових публікацій за темою, \n                  ім’ям автора, установою або ключовими словами",
+    parameters: {
+      type: "object",
+      properties: {
+        query: { type: "string", description: "Пошуковий запит" },
+        year_from: { type: "integer", description: "Початковий рік (фільтр)" },
+        year_to: { type: "integer", description: "Кінцевий рік (фільтр)" },
+        open_access: { type: "boolean", description: "Фільтр: лише OA" }
+      },
+      required: ["query"]
+    }
+  },
+  {
+    name: "compare_researchers",
+    description: "Порівняти метрики кількох дослідників",
+    parameters: {
+      type: "object",
+      properties: {
+        orcids: {
+          type: "array",
+          items: { type: "string" },
+          description: "Список ORCID iD для порівняння"
+        }
+      },
+      required: ["orcids"]
+    }
+  },
+  {
+    name: "get_department_summary",
+    description: "Агрегувати статистики для кафедри/підрозділу",
+    parameters: {
+      type: "object",
+      properties: {
+        researchers: {
+          type: "array",
+          items: { type: "string" },
+          description: "Список ORCID iD членів підрозділу"
+        },
+        period: { type: "string", description: "Період (наприклад, '2020-2024')" }
+      },
+      required: ["researchers"]
+    }
+  },
+  {
+    name: "generate_report",
+    description: "Згенерувати форматований звіт у вказаному форматі",
+    parameters: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          enum: ["annual", "attestation", "grant", "custom"],
+          description: "Тип звіту"
+        },
+        format: {
+          type: "string",
+          enum: ["docx", "xlsx", "pdf"],
+          description: "Формат виводу"
+        },
+        template: { type: "string", description: "Назва шаблону (для custom)" }
+      },
+      required: ["type", "format"]
+    }
+  }
+];
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Лог виконання: крок 1 (збір з ORCID)},label={lst:b-orcid-log}]
+Отримано 45 публікацій для дослідника X
+Джерело: orcid
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Лог виконання: крок 2 (збір з OpenAlex)},label={lst:b-openalex-log}]
+Отримано 52 публікації для дослідника X
+Джерело: openalex
+Виявлено: 38 потенційних дублікатів за DOI
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Лог виконання: крок 3 (злиття)},label={lst:b-merge-log}]
+Зіставлено за DOI: 38 записів -> злиті
+Зіставлено за Title+Year: 4 записи -> злиті
+Нові унікальні з OpenAlex: 10 записів -> додано
+Нові унікальні з ORCID: 3 записи -> додано
+\end{lstlisting}
+
+\begin{lstlisting}[caption={Лог виконання: результат формування Golden Record},label={lst:b-result-log}]
+Golden Records: 55 унікальних публікацій
+Відстежено джерела: {orcid: 45, openalex: 52}
+Частка дублікатів до злиття: 23%
+Частка дублікатів після злиття: 0%
+\end{lstlisting}

@@ -1,0 +1,13 @@
+{
+  "researchers": 150,
+  "departments": 20,
+  "dupRate": 0.2,
+  "corruption": 1,
+  "K": 30,
+  "KS": 12,
+  "manualModel": {
+    "a": 2.5,
+    "b": 5,
+    "c": 45
+  }
+}
