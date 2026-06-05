@@ -1,0 +1,56 @@
+% ResearchIQ manuscript — restructured for "Information Technologies and Learning Tools" (ITLT)
+% Ukrainian, ITLT structure (Introduction / Theoretical backgrounds + Methods / Findings / Conclusions).
+% Tectonic-friendly preamble; body kept pandoc-convertible (no tikz; booktabs tables; \includegraphics).
+\documentclass[12pt,a4paper]{article}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setotherlanguage{english}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{geometry}
+\geometry{margin=2.5cm}        % ITLT: all margins 2.5 cm
+\usepackage{setspace}
+\singlespacing                  % ITLT: single spacing
+\usepackage{booktabs,longtable,array}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\graphicspath{{../figures/}}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{hyperref}
+\hypersetup{hidelinks}
+\setlength{\parindent}{1em}     % ITLT: first-line indent
+
+\begin{document}
+
+% ---- Front matter (ITLT) ----
+\noindent УДК 004.9:001.89:378 \hfill % [UNCONFIRMED — confirm UDC with editor]
+
+\begin{center}
+{\large\bfseries ГЕНЕРАТИВНИЙ ШТУЧНИЙ ІНТЕЛЕКТ ТА АВТОНОМНІ АГЕНТИ В УПРАВЛІННІ НАУКОВОЮ ДІЯЛЬНІСТЮ ЗАКЛАДІВ ВИЩОЇ ОСВІТИ: КОНЦЕПТУАЛЬНА МОДЕЛЬ І ВІДТВОРЮВАНА АПРОБАЦІЯ}
+\end{center}
+
+\vspace{0.5em}
+\noindent\textbf{Заболотній Сергій Васильович}\\
+доктор технічних наук, професор\\
+Черкаський державний бізнес-коледж, м.~Черкаси, Україна\\
+\textit{ORCID: 0000-0000-0000-0000} % [UNCONFIRMED — insert author ORCID]\\
+\textit{zabolotniisv@... } % [UNCONFIRMED — insert email]
+
+\vspace{1em}
+
+% ---- Abstracts (UA + EN) + keywords ----
+\input{sections/00_abstract}
+
+% ---- Body ----
+\input{sections/01_intro}
+\input{sections/02_methods}
+\input{sections/03_findings}
+\input{sections/04_conclusions}
+
+% ---- References (IEEE; trimmed to <=30; >=40% Scopus/WoS; language tags handled in DOCX) ----
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

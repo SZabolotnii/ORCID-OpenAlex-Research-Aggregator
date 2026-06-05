@@ -71,3 +71,27 @@ cp -f build_xe/main_trace.pdf artifacts/ResearchIQ_TRACE_variant.pdf
 
 `latexmk` runs XeLaTeX + BibTeX with enough reruns to stabilise cross-references
 and citations. Current page counts: base ≈ 56 pp., TRACE variant ≈ 65 pp.
+
+## ITLT journal variant with TRACE (`itlt_trace/`)
+
+`itlt_trace/` is the journal-conformant variant for **Information Technologies and
+Learning Tools (ITLT)**, derived from the TRACE manuscript: ITLT structure
+(Introduction / Theoretical backgrounds + Methods / Findings / Conclusions),
+UA + EN structured abstracts and keywords, condensed to journal length
+(~19 pp.). It weaves the TRACE backbone in concisely — a four-layer mapping
+(L1 deterministic core / L2a classical ML / L2b LLM validator / L3–L4 escalation
++ human oversight), the Model-Parsimony principle and CPR — and links the
+open-source repository. It does **not** carry the extended TRACE chapter,
+formalism or appendices (those stay in `main_trace.tex`).
+
+Build (XeLaTeX + BibTeX; IEEE references via `IEEEtran.bst` — install
+`texlive-publishers`):
+
+```bash
+cd paper/itlt_trace
+latexmk -xelatex -bibtex -interaction=nonstopmode -outdir=build_xe main.tex
+cp -f build_xe/main.pdf ../artifacts/ResearchIQ_ITLT_TRACE.pdf
+```
+
+Note: confirm the exact ITLT length/formatting limits with the editor; the
+front-matter UDC, ORCID and email are placeholders to be filled before submission.
