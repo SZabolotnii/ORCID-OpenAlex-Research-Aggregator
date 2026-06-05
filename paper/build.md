@@ -77,12 +77,25 @@ and citations. Current page counts: base ≈ 56 pp., TRACE variant ≈ 65 pp.
 `itlt_trace/` is the journal-conformant variant for **Information Technologies and
 Learning Tools (ITLT)**, derived from the TRACE manuscript: ITLT structure
 (Introduction / Theoretical backgrounds + Methods / Findings / Conclusions),
-UA + EN structured abstracts and keywords, condensed to journal length
-(~19 pp.). It weaves the TRACE backbone in concisely — a four-layer mapping
-(L1 deterministic core / L2a classical ML / L2b LLM validator / L3–L4 escalation
-+ human oversight), the Model-Parsimony principle and CPR — and links the
-open-source repository. It does **not** carry the extended TRACE chapter,
-formalism or appendices (those stay in `main_trace.tex`).
+UA + EN structured abstracts and keywords (~21 pp. incl. appendix). It puts the
+TRACE engineering framework front and centre: the goal statement and a dedicated
+task call it out explicitly, the Methods carry a four-layer architecture figure
+(`figures/arch_trace.pdf` — L1 deterministic core / L2a classical ML / L2b LLM
+validator / L3–L4 escalation + human oversight), plus the Model-Parsimony
+principle and CPR. To keep the body short, the **full quantitative evaluation**
+(Monte-Carlo result tables + sensitivity figures f1/f2/f3) lives in **Appendix A**
+(`sections/05_appendix.tex`); the Findings body keeps only a qualitative summary
+with headline numbers + threats to validity, pointing to the appendix. The
+variant links the open-source repo and does **not** carry the extended TRACE
+chapter or formalism (those stay in `main_trace.tex`).
+
+The architecture figure is generated from a standalone TikZ source
+(`figures/arch_trace.tex`) to keep `main.tex` `\includegraphics`-only and
+DOCX-convertible:
+
+```bash
+cd paper/figures && xelatex arch_trace.tex   # regenerate arch_trace.pdf
+```
 
 Build (XeLaTeX + BibTeX; IEEE references via `IEEEtran.bst` — install
 `texlive-publishers`):

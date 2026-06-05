@@ -1,0 +1,33 @@
+% Standalone TRACE four-layer architecture figure for the ITLT variant.
+% Build: xelatex arch_trace.tex  → arch_trace.pdf  (then convert to PNG if needed).
+\documentclass[border=6pt]{standalone}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setotherlanguage{english}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={draw, rounded corners, align=center, inner sep=5pt, minimum width=14cm}
+]
+  \node[box, fill=blue!8] (l4) {\textbf{L4 --- Обмежений людський нагляд} \,(\emph{operator supervision})\\\footnotesize admin override \;|\; audit-log \;|\; перевизначення будь-якого рішення};
+  \node[box, below=4mm of l4, fill=orange!12] (l3) {\textbf{L3 --- Політика ескалації} \,(\emph{staged qualification})\\\footnotesize пороги $\theta_{\mathrm{match}}/\theta_{\mathrm{review}}$ \;|\; fail-fast на конфлікті DOI \;|\; HITL-тригери};
+  \node[box, below=4mm of l3, fill=green!8] (l2) {\textbf{L2 --- Інвентар навчених компонентів}\\[3pt]
+    \footnotesize
+    \begin{tabular}{@{}p{0.40\linewidth}@{\hspace{4mm}}p{0.40\linewidth}@{}}
+      \textbf{L2a --- класичний ML}\newline ER-скоринг: TF, Левенштейн, Жаккар; логіт $\sigma(\boldsymbol{\beta}\cdot\boldsymbol{\phi})$ &
+      \textbf{L2b --- LLM-валідатор}\newline NL-запити, пояснення, перевірка узгодженості \\
+    \end{tabular}};
+  \node[box, below=4mm of l2, fill=gray!12] (l1) {\textbf{L1 --- Детерміноване ядро} \,(\emph{trust anchor}, non-generative)\\\footnotesize канонізація DOI \;|\; жорсткі обмеження (охоронець конфлікту DOI) \;|\; провенанс (W3C~PROV)};
+
+  \draw[-{Stealth[length=2.6mm]}, thick] (l1.north) -- (l2.south);
+  \draw[-{Stealth[length=2.6mm]}, thick] (l2.north) -- (l3.south);
+  \draw[-{Stealth[length=2.6mm]}, thick] (l3.north) -- (l4.south);
+\end{tikzpicture}
+\end{document}
