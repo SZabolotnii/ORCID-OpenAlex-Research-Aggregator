@@ -7,10 +7,11 @@
 [![pi-agent](https://img.shields.io/badge/pi--agent-0.68-purple)](https://github.com/badlogic/pi-mono)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tests](https://img.shields.io/badge/tests-node%3Atest-success)](tests/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Multi-tenant research analytics platform** for university administrators.  
-Aggregate faculty data from ORCID + OpenAlex, analyze with AI, generate ministry reports.
+**Multi-tenant research analytics platform** for university administrators.<br/>
+Aggregate faculty data from ORCID + OpenAlex (and optionally Scopus / Web of Science), reconcile it into one authoritative record per publication, analyze it with an AI agent, and generate ministry-ready reports.
 
 [**Live Demo**](https://orcid-csbc.szabolotnii.site) · [Kaggle Writeup](https://www.kaggle.com/competitions/gemini-3/writeups/orcid-and-openalex-research-aggregator) · [Report Bug](https://github.com/SZabolotnii/ORCID-OpenAlex-Research-Aggregator/issues)
 
@@ -18,166 +19,187 @@ Aggregate faculty data from ORCID + OpenAlex, analyze with AI, generate ministry
 
 ---
 
-## Origin
+## Table of Contents
 
-This project was created as part of the [**Vibe Coding with Gemini 3 Pro**](https://www.kaggle.com/competitions/gemini-3) competition on Kaggle. The challenge was to build an innovative application using Google's Gemini API and vibe coding approach. ResearchIQ started as a hackathon prototype built in 5 hours using Google AI Studio, and has since evolved into a full multi-tenant platform with a pi-agent-powered backend.
-
-> [Read the full Kaggle writeup](https://www.kaggle.com/competitions/gemini-3/writeups/orcid-and-openalex-research-aggregator)
+- [Why ResearchIQ](#why-researchiq)
+- [Design Philosophy](#design-philosophy)
+- [Architecture](#architecture)
+  - [System overview](#system-overview)
+  - [Golden Record — data reconciliation engine](#golden-record--data-reconciliation-engine)
+  - [AI agent](#ai-agent)
+  - [Deterministic report generation](#deterministic-report-generation)
+  - [Multi-tenant data flow](#multi-tenant-data-flow)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Importing Faculty Data](#importing-faculty-data)
+- [Testing](#testing)
+- [Benchmark](#benchmark)
+- [Project Structure](#project-structure)
+- [Multi-tenant Setup](#multi-tenant-setup)
+- [Deployment](#deployment)
+- [Research & Citation](#research--citation)
+- [Contributing](#contributing)
+- [License & Contact](#license--contact)
 
 ---
 
-## Problem
+## Why ResearchIQ
 
-University administrators spend **40+ hours monthly** compiling research reports for accreditation and ministry requirements. Data is fragmented across ORCID, Scopus, Google Scholar, and institutional databases with manual copy-paste leading to errors.
+University administrators spend **tens of hours per reporting cycle** compiling research output for accreditation and ministry (MON) requirements. The data is fragmented across **ORCID, OpenAlex, Scopus, Web of Science** and local spreadsheets, and the same publication appears in several systems with slightly different metadata. Manual copy-paste, deduplication and formatting are slow and error-prone — a reproducible synthetic-model estimate puts the manual effort at **~70 hours per 50-faculty cycle** (see [Benchmark](#benchmark)).
 
-## Solution
+ResearchIQ automates the workflow end to end:
 
-ResearchIQ automates the entire workflow:
+1. **Import** faculty by ORCID iD (CSV or UI).
+2. **Aggregate** publications and metrics from ORCID + OpenAlex (Scopus/WoS optional).
+3. **Reconcile** multi-source records into a single **Golden Record** per publication, with provenance.
+4. **Analyze** with an AI agent that has the full institutional snapshot in context.
+5. **Generate** standardized reports (Scopus/WoS list, attestation card, accreditation) and fill custom templates.
 
-1. **Import** faculty via CSV with ORCID IDs
-2. **Aggregate** publications and metrics from ORCID + OpenAlex
-3. **Analyze** with AI agent that has full access to institutional data
-4. **Generate** standardized reports from templates
+> **Origin.** Built for the [Vibe Coding with Gemini 3 Pro](https://www.kaggle.com/competitions/gemini-3) Kaggle competition (a 5-hour Google AI Studio prototype), then evolved into a full multi-tenant platform with a pi-agent backend and a deterministic reconciliation engine. [Read the writeup](https://www.kaggle.com/competitions/gemini-3/writeups/orcid-and-openalex-research-aggregator).
+
+---
+
+## Design Philosophy
+
+ResearchIQ deliberately keeps the LLM **out** of the number-crunching path. Trust in an analytics system is a property of the **architecture**, not of the model:
+
+- **Deterministic core for structured data.** Deduplication, metric aggregation, and report tables are computed by plain, testable TypeScript — reproducible and free of arithmetic/citation hallucination.
+- **LLM only where language is genuinely needed.** Natural-language questions, explanations, and report *narrative* — never the figures.
+- **Provenance & review.** Every reconciled record carries how it was assembled and is flagged when a near-duplicate could not be resolved automatically (human-in-the-loop).
+
+This mirrors the **TRACE** engineering framework for trustworthy agentic AI (deterministic L1 core, classical-ML L2a, LLM-validator L2b, explicit escalation and human supervision). The accompanying manuscript and reproducible benchmark live in [`paper/`](paper/). See [Research & Citation](#research--citation).
 
 ---
 
 ## Architecture
 
-### System Overview
+### System overview
 
 ```mermaid
 graph TB
     subgraph Browser["Browser (React 19 SPA)"]
-        UI[Dashboard / Faculty List / Reports]
+        UI[Dashboard / Faculty / Reports]
         Chat[AI Assistant]
         Auth[Admin / Viewer Mode]
     end
 
-    subgraph VPS["VPS (srv1437773.hstgr.cloud)"]
-        Caddy[Caddy Reverse Proxy<br/>*.szabolotnii.site SSL]
+    subgraph VPS["VPS"]
+        Caddy[Caddy Reverse Proxy<br/>*.szabolotnii.site · SSL]
         subgraph Backend["Node.js Backend (port 3001)"]
-            API[Express API]
+            API[Express API · rate limited]
             Agent["pi-agent-core<br/>Gemini / OpenRouter"]
-            Tools["7 Research Tools"]
-            Tenants[Multi-tenant Router]
+            Tools["Research Tools"]
+            Report["Deterministic Report Builder"]
         end
-        Data[(Per-tenant JSON<br/>data/csbc.json)]
-        Static[Static Frontend<br/>/var/www/orcid-tracker]
+        Data[(Per-tenant JSON)]
+        Static[Static Frontend]
     end
 
     subgraph External["External APIs"]
         ORCID[ORCID Public API]
         OA[OpenAlex API]
+        SC[Scopus / WoS · optional]
     end
 
     Browser -->|HTTPS| Caddy
     Caddy -->|/api/*| API
     Caddy -->|/*| Static
-    API --> Agent
-    Agent --> Tools
-    API --> Tenants
-    Tenants --> Data
-    Tools -->|Live metrics| OA
-    Tools -->|Local queries| Data
+    API --> Agent --> Tools
+    API --> Report
+    Tools -->|live metrics| OA
+    Tools -->|local queries| Data
+    Data -.enrichment.-> ORCID & OA & SC
 ```
 
-### AI Agent Architecture
+### Golden Record — data reconciliation engine
 
-The AI assistant is powered by [pi-agent-core](https://github.com/badlogic/pi-mono) — a minimal, extensible agent runtime by Mario Zechner. The backend can run either Gemini or OpenRouter-selected models through a provider resolver, while keeping keys and model-selection logic server-side. See [docs/pi-agent.md](docs/pi-agent.md) for details.
+The heart of the platform is a **dependency-free, deterministic Entity-Resolution pipeline** ([`services/goldenRecord.ts`](services/goldenRecord.ts)) that turns the same publication's many source records into one authoritative **Golden Record**:
+
+```mermaid
+graph LR
+    R[Raw records<br/>ORCID · OpenAlex · Scopus · WoS] --> N[Canonicalize ν<br/>DOI · title NFKC/Unicode · authors translit]
+    N --> B[Blocking<br/>DOI · long title tokens · year]
+    B --> S["Pairwise score σ(β·φ)<br/>DOI · title cosine · Levenshtein · authors · venue · year"]
+    S --> C[Cluster<br/>union-find + DOI-conflict guard]
+    C --> F[Fuse<br/>source-reliability tie-breaks]
+    F --> G[(Golden Record<br/>+ provenance + reviewFlag)]
+```
+
+Key properties:
+
+- **Cyrillic-safe normalization.** Titles are normalized with the Unicode `\p{P}` class (the earlier `[^\w\s]` rule silently gutted Ukrainian/Cyrillic titles); author names are transliteration- and order-invariant (`Заболотній С.` ↔ `S. Zabolotnii`).
+- **Logistic pairwise scoring** `σ(β·φ)` over interpretable features (DOI match `+3.0`, **DOI conflict `−5.0`**, title cosine, char similarity, author/venue Jaccard, year agreement) with two thresholds: `θ_match = 0.90` (auto-merge) and `θ_review = 0.70` (flag for review).
+- **Fail-fast guard.** Two records with *different valid DOIs* are **never** auto-merged.
+- **Provenance + HITL.** Each Golden Record records its contributing sources, the winning source per field, the weakest accepted-merge score, cluster size, and a `reviewFlag` when an unresolved near-duplicate exists — surfaced via `reviewFlaggedPublications()` for an admin to confirm or split.
+
+The engine ships with a reproducible [synthetic benchmark](#benchmark) and a [unit-test suite](#testing).
+
+### AI agent
+
+The assistant is powered by [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by Mario Zechner). The backend builds a system prompt containing a **full faculty snapshot + pre-computed aggregates**, so most questions are answered directly from context. For filtering, ranking, full publication lists, or live lookups, the agent calls one of **nine deterministic research tools** ([`server/src/tools.ts`](server/src/tools.ts)): `query_faculty_rankings`, `search_local_publications`, `get_department_comparison`, `get_faculty_detail`, `get_citation_trends`, `find_collaboration_network`, `get_author_metrics_live`, `search_global_works`, `get_current_date`. The backing LLM is selected server-side via `LLM_PROVIDER`.
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant F as Frontend
     participant B as Backend API
     participant A as pi-agent
     participant G as Backend-selected LLM
-    participant T as Research Tools
+    participant T as Deterministic Tools
 
-    U->>F: "Who has highest h-index?"
-    F->>B: POST /api/chat {tenantId, query}
-    B->>A: Create agent with system prompt<br/>(full faculty snapshot + aggregates)
-    A->>G: User query + tool definitions
-    G-->>A: Answer from context<br/>(no tool call needed)
-    A-->>B: Response text
-    B-->>F: {response: "..."}
-    F-->>U: Display answer
-
-    Note over G,T: Complex queries trigger tool calls
-
-    U->>F: "Scopus publications in 2025"
-    F->>B: POST /api/chat
-    B->>A: Create agent
-    A->>G: Query + tools
-    G->>A: Call search_local_publications
-    A->>T: Execute tool
-    T-->>A: Filtered results
-    A->>G: Tool results
-    G-->>A: Formatted answer
-    A-->>B: Response
-    B-->>F: {response: "..."}
+    U->>B: "Top 5 by h-index in CS dept?"
+    B->>A: agent + system prompt (snapshot + aggregates)
+    A->>G: query + tool schemas
+    G->>A: call query_faculty_rankings
+    A->>T: execute (pure local computation)
+    T-->>A: ranked results
+    A->>G: tool results
+    G-->>A: formatted answer (language only)
+    A-->>B: response
 ```
 
-### Multi-tenant Data Flow
+> See [docs/pi-agent.md](docs/pi-agent.md) for agent configuration, tool design, and system-prompt notes.
+
+### Deterministic report generation
+
+Reports ([`server/src/reportStats.ts`](server/src/reportStats.ts) + [`reportService.ts`](server/src/reportService.ts)) are assembled in two parts:
+
+- **Numeric / bibliographic backbone — built in code, no LLM.** Department summaries, per-faculty metrics, indexed-publication lists and data-quality notes are computed deterministically over **every** faculty member (no truncation), so counts, citations and DOIs are always correct and reproducible.
+- **Narrative — LLM, grounded.** The model writes only the executive summary and recommendations around the authoritative figures, and degrades to a deterministic fallback if the provider is unavailable.
+
+Report types: `scopus_wos`, `faculty_card`, `accreditation`, `general`, plus custom DOCX/XLSX/CSV/PDF/Markdown template filling.
+
+### Multi-tenant data flow
 
 ```mermaid
 graph LR
     subgraph Subdomains
-        S1[orcid-csbc.szabolotnii.site]
-        S2[orcid-uni2.szabolotnii.site]
-        S3[orcid-private.szabolotnii.site]
+        S1[orcid-csbc.…]
+        S3[orcid-private.…]
     end
-
-    subgraph Frontend
-        TD{Tenant Detection<br/>from subdomain}
-    end
-
-    subgraph Backend
-        TR[Tenant Router]
-        AU[Auth Verify]
-    end
-
-    subgraph Storage
-        T1[(csbc.json<br/>public)]
-        T2[(uni2.json<br/>public)]
-        T3[(private.json<br/>password)]
-        TC[(tenants.json)]
-    end
-
-    S1 --> TD
-    S2 --> TD
+    TD{Tenant detection<br/>from subdomain}
+    TR[Tenant Router]
+    AU[Auth Verify · signed token]
+    T1[(csbc.json · public)]
+    T3[(private.json · password)]
+    S1 --> TD --> TR --> T1
     S3 --> TD
-    TD -->|tenantId| TR
-    TR --> TC
-    TR --> T1
-    TR --> T2
     S3 --> AU -->|verified| T3
 ```
 
-### Key Features
+Each institution gets `orcid-{id}.szabolotnii.site` with isolated data, public/private access control, and a server-verified admin/viewer role issued as a signed token (`AUTH_TOKEN_SECRET`).
 
-| Feature | Description |
-|---------|-------------|
-| **AI Research Assistant** | 7 tools: faculty rankings, publication search, department comparison, faculty detail, live OpenAlex metrics, global search, date |
-| **Multi-tenant** | Each institution gets `orcid-{id}.szabolotnii.site` with separate data and access control |
-| **Admin/Viewer modes** | Admin: full CRUD, import/export, settings. Viewer: read-only dashboard + AI + reports |
-| **Batch Import** | CSV import with automatic ORCID + OpenAlex data fetching |
-| **Report Generator** | Standard reports (Scopus/WoS, faculty card, accreditation) + custom template filling |
-| **Bilingual** | English / Ukrainian interface |
+---
 
-### AI Agent — pi-agent-core
-
-The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by Mario Zechner) as the agent runtime. It provides the tool execution loop, parallel tool calls, and streaming — while we define custom research tools and system prompt. The agent receives a **full faculty data snapshot** in the system prompt, so most questions are answered instantly from context without tool calls. For complex queries (filtering, ranking, full publication lists), the agent calls one of 7 custom tools that operate on local data. External API calls (OpenAlex) are used only when fresh data is needed. The backing LLM can be selected on the backend via `LLM_PROVIDER=gemini|openrouter|auto`.
-
-> See [docs/pi-agent.md](docs/pi-agent.md) for detailed documentation on agent configuration, tools, and system prompt design.
-
-### Tech Stack
+## Tech Stack
 
 | Layer | Technologies |
 |-------|-------------|
-| **Frontend** | React 19, TypeScript, Vite, TailwindCSS, Recharts |
-| **Backend** | Node.js, Express, pi-agent-core, pi-ai (Gemini / OpenRouter) |
-| **Data Sources** | ORCID Public API, OpenAlex API |
+| **Frontend** | React 19, TypeScript, Vite, TailwindCSS, Recharts, React Router 7 |
+| **Backend** | Node.js, Express, pi-agent-core, provider resolver (Gemini / OpenRouter) |
+| **Core** | Dependency-free Golden Record ER engine; deterministic report builder |
+| **Data sources** | ORCID Public API, OpenAlex; Scopus (server-side proxy) and WoS optional |
+| **Tooling** | `node:test` (via `tsx`), synthetic Monte-Carlo benchmark, ESLint, `tsc` |
 | **Deployment** | VPS, PM2, Caddy (reverse proxy + SSL) |
 
 ---
@@ -186,63 +208,69 @@ The backend uses [pi-agent-core](https://github.com/badlogic/pi-mono) (MIT, by M
 
 ### Prerequisites
 
-- **Node.js** 20+ ([Download](https://nodejs.org/))
-- **Gemini API key** or **OpenRouter API key**
+- **Node.js 20+** ([download](https://nodejs.org/))
+- A **Gemini** or **OpenRouter** API key
 
-### Local Development
+### Local development
 
 ```bash
 # 1. Clone
 git clone https://github.com/SZabolotnii/ORCID-OpenAlex-Research-Aggregator.git
 cd ORCID-OpenAlex-Research-Aggregator
 
-# 2. Frontend
+# 2. Install (frontend, then backend)
 npm install
-
-# 3. Backend
 cd server && npm install && cd ..
 
-# 4. Optional frontend env
-touch .env
-
-# 5. Configure backend (example: Gemini mode)
+# 3. Configure the backend (Gemini example)
 cat > server/.env <<'EOF'
 LLM_PROVIDER=gemini
 GEMINI_API_KEY=your_key_here
 PORT=3001
-DATA_DIR=/opt/orcid-tracker-api/data
+DATA_DIR=./data
 AUTH_TOKEN_SECRET=replace-with-a-long-random-secret
 EOF
+# (or: cp server/.env.production.example server/.env)
 
-# Production template:
-# cp server/.env.production.example server/.env
+# 4. Run both dev servers
+cd server && npm run dev &   # backend on :3001
+npm run dev                  # frontend on :3000 (proxies /api → :3001)
+```
 
-# 6. Start both servers
-cd server && npm run dev &
-npm run dev
+Open [http://localhost:3000](http://localhost:3000).
 
-# 7. Optional local verification
+### Verify your checkout
+
+```bash
+npm test          # unit tests (deterministic core)
 npm run lint
 npm run typecheck
 npm run build
 ```
 
-Frontend: [http://localhost:3000](http://localhost:3000) (proxies `/api` to backend at :3001)
+---
 
-### LLM Provider Modes
+## Configuration
 
-The backend supports three provider modes:
+All backend settings live in `server/.env` (template: [`server/.env.production.example`](server/.env.production.example)).
 
-- `LLM_PROVIDER=gemini` — use Gemini only
-- `LLM_PROVIDER=openrouter` — use OpenRouter only
-- `LLM_PROVIDER=auto` — prefer OpenRouter when `OPENROUTER_API_KEY` is present, otherwise fall back to Gemini
+| Variable | Purpose |
+|----------|---------|
+| `LLM_PROVIDER` | `gemini`, `openrouter`, or `auto` |
+| `GEMINI_API_KEY` | required for `gemini` (and fallback in `auto`) |
+| `OPENROUTER_API_KEY` | required/preferred for `openrouter` / `auto` |
+| `OPENROUTER_MODEL` · `OPENROUTER_CHAT_MODEL` · `OPENROUTER_REPORT_MODEL` | pin models (global / chat / report) |
+| `AUTH_TOKEN_SECRET` | **required** — signs tenant auth tokens |
+| `SCOPUS_API_KEY` · `SCOPUS_REFERER` | optional Scopus enrichment (domain-locked Elsevier key) |
+| `PORT` · `DATA_DIR` | server port (3001) and data directory |
 
-For OpenRouter, the backend can auto-discover a current free model from `https://shir-man.com/api/free-llm/top-models`, cache it, and fall back to `openrouter/free`. You can still pin a model explicitly with `OPENROUTER_MODEL`, `OPENROUTER_CHAT_MODEL`, or `OPENROUTER_REPORT_MODEL`.
+**Provider modes:** `auto` prefers OpenRouter when `OPENROUTER_API_KEY` is set, else Gemini. For OpenRouter, the backend can auto-discover a current free model, cache it, and fall back to `openrouter/free`; pin explicitly with the `OPENROUTER_*_MODEL` variables. See [docs/openrouter-deployment.md](docs/openrouter-deployment.md).
 
-### Import Faculty Data
+---
+
+## Importing Faculty Data
 
 ```bash
-# From CSV file (one ORCID per line, optional: department, position columns)
 npx tsx scripts/import-csv.ts faculty.csv \
   --tenant csbc \
   --institution "University Name" \
@@ -254,105 +282,106 @@ npx tsx scripts/import-csv.ts faculty.csv \
 #   --institution <name>  Default institution name
 #   --department <name>   Default department
 #   --position <name>     Default position (default: Associate Professor)
+#   --admin-password / --auth-token   Credentials for the protected endpoint
 #   --output <file>       Also save JSON locally
 #   --dry-run             Fetch data without uploading
 ```
 
-### Smoke Check Against a Running API
+The importer fetches ORCID + OpenAlex data and reconciles it through the Golden Record engine before uploading.
+
+---
+
+## Testing
+
+Unit tests use **Node's built-in test runner** (`node:test`) via `tsx` — zero extra test framework:
 
 ```bash
-# Public/basic tenant checks
-APP_BASE_URL=http://localhost:3001 \
-SMOKE_TENANT_ID=default \
-npm run smoke
-
-# Private tenant read/write checks
-APP_BASE_URL=http://localhost:3001 \
-SMOKE_TENANT_ID=default \
-SMOKE_PRIVATE_TENANT_ID=your-private-tenant \
-SMOKE_VIEWER_PASSWORD=viewer-password \
-SMOKE_ADMIN_PASSWORD=admin-password \
-npm run smoke
+npm test
 ```
 
-`npm run smoke` expects a live backend and verifies:
-- `/api/health`
-- tenant config loading
-- public/basic tenant data read
-- `401` on unauthenticated private tenant read
-- viewer read with token
-- admin write with token
+Specs in [`tests/`](tests/) cover the deterministic core:
+
+- **`goldenRecord.test.ts`** — DOI canonicalization, Cyrillic-safe title normalization, transliteration-invariant author keys, pairwise scoring, clustering, the **DOI-conflict fail-fast guard**, review-band flagging, and the DOI-only / Title+Year baselines.
+- **`dataMergeService.test.ts`** — cross-source merge, source tagging, and `reviewFlaggedPublications`.
+- **`reportStats.test.ts`** — aggregates, Markdown tables, data-quality notes, faculty cards, and the **50-faculty no-truncation regression**.
+
+---
+
+## Benchmark
+
+A reproducible, dependency-free Monte-Carlo benchmark ([`scripts/synthetic-benchmark.ts`](scripts/synthetic-benchmark.ts)) generates a **synthetic** model university (no real institution or personal data), projects each work into ORCID/OpenAlex/Scopus records with controlled, gold-labelled duplication and corruption, then runs the **real** engine plus DOI-only and Title+Year baselines on identical inputs.
+
+```bash
+npm run benchmark                                   # default: 150 researchers, 20 departments
+npx tsx scripts/synthetic-benchmark.ts \
+  --researchers 50 --departments 4 \
+  --outdir paper/benchmark/faculty50               # the 50-faculty case used in the paper
+```
+
+It reports pairwise Precision/Recall/F1 and B³ F1, merged-field accuracy, engine compute time vs a transparent analytic manual-effort model, and sensitivity sweeps (mean ± 95% CI). Artifacts and the LaTeX manuscript are in [`paper/`](paper/).
+
+> The manual-effort figures are a **transparent analytic model with declared coefficients**, not a human-subjects measurement.
 
 ---
 
 ## Project Structure
 
 ```
-researchiq/
-├── App.tsx                  # Main app: routing, state, admin/viewer modes, tenant detection
-├── components/
-│   ├── Dashboard.tsx        # Analytics dashboard with charts and filters
-│   ├── FacultyList.tsx      # Faculty table (admin: edit/delete, viewer: read-only)
-│   ├── ChatInterface.tsx    # AI assistant UI
-│   ├── ReportGenerator.tsx  # Report generation with template upload
-│   ├── OrcidSearch.tsx      # ORCID affiliation search (admin only)
-│   └── ProfileModal.tsx     # Faculty detail view
+ORCID-OpenAlex-Research-Aggregator/
+├── App.tsx                     # Routing, state, admin/viewer modes, tenant detection
+├── components/                 # Dashboard, FacultyList, ChatInterface, ReportGenerator, …
 ├── services/
-│   ├── geminiService.ts     # Frontend client for /api/chat and /api/reports/generate
-│   ├── tenantApi.ts         # Tenant auth + protected data API
-│   ├── facultyDataService.ts# Faculty enrichment pipeline
-│   ├── orcidService.ts      # ORCID Public API
-│   ├── openAlexService.ts   # OpenAlex API (metrics, works)
-│   └── dataMergeService.ts  # Publication deduplication
-├── server/                  # Backend (separate package)
-│   └── src/
-│       ├── index.ts         # Express API: tenants, data, chat
-│       ├── agent.ts         # pi-agent config, system prompt, context builder
-│       ├── tools.ts         # 7 research tool implementations
-│       ├── llmProvider.ts   # Gemini/OpenRouter selection + OpenRouter discovery
-│       └── types.ts         # Shared types
-├── docs/
-│   └── openrouter-deployment.md # Production env and rollout notes
+│   ├── goldenRecord.ts         # ★ Deterministic Entity-Resolution engine (Golden Record)
+│   ├── dataMergeService.ts     # Production merge wrapper + HITL review surfacing
+│   ├── facultyDataService.ts   # ORCID/OpenAlex/Scopus/WoS enrichment pipeline
+│   ├── orcidService.ts · openAlexService.ts · scopusService.ts · wosService.ts
+│   ├── geminiService.ts        # Frontend client for /api/chat and /api/reports/generate
+│   └── tenantApi.ts            # Tenant auth + protected data access
+├── server/src/
+│   ├── index.ts                # Express API: tenants, data, auth, chat, reports, rate limits
+│   ├── agent.ts                # pi-agent config, system prompt, context builders
+│   ├── tools.ts                # 9 deterministic research tools
+│   ├── reportStats.ts          # ★ Deterministic report tables/statistics (no LLM)
+│   ├── reportService.ts        # Report assembly: deterministic core + grounded narrative
+│   ├── llmProvider.ts          # Gemini/OpenRouter resolver + free-model discovery
+│   └── scopusService.ts        # Domain-locked Elsevier proxy
+├── tests/                      # node:test specs (npm test)
 ├── scripts/
-│   └── import-csv.ts        # CLI data import tool
-├── contexts/                # LanguageContext (EN/UA)
-├── utils/translations.ts    # Bilingual translations
-├── types.ts                 # Frontend TypeScript types
-└── vite.config.ts           # Vite config with /api proxy
+│   ├── synthetic-benchmark.ts  # Reproducible ER benchmark
+│   └── import-csv.ts           # CLI data import
+├── paper/                      # LaTeX manuscript + benchmark artifacts
+├── contexts/ · utils/          # Bilingual (EN/UA) context and translations
+├── docs/                       # pi-agent, OpenRouter deployment, smoke checklist
+└── types.ts                    # Frontend shared types
 ```
+
+★ = the deterministic, fully-tested core.
 
 ---
 
 ## Multi-tenant Setup
 
-Each institution gets a subdomain following the pattern `orcid-{id}.szabolotnii.site`:
+Each institution gets a subdomain `orcid-{id}.szabolotnii.site`:
 
 ```bash
-# 1. Add DNS A-record: orcid-{id}.szabolotnii.site → VPS IP
-# 2. Add subdomain to Caddy config
+# 1. Add a DNS A-record: orcid-{id}.szabolotnii.site → VPS IP
+# 2. Add the subdomain to the Caddy config
 # 3. Import data:
 npx tsx scripts/import-csv.ts faculty.csv --tenant {id} --institution "Name"
 ```
 
-Tenant configuration stored in `data/tenants.json`:
+Tenant registry (`data/tenants.json`):
+
 ```json
-[{
-  "id": "csbc",
-  "subdomain": "orcid-csbc",
-  "name": "Cherkasy State Business College",
-  "public": true,
-  "adminPasswordHash": ""
-}]
+[{ "id": "csbc", "subdomain": "orcid-csbc", "name": "…", "public": true, "adminPasswordHash": "" }]
 ```
 
-- `public: true` — dashboard visible to everyone, admin mode requires password
-- `public: false` — entire dashboard requires password to view
+- `public: true` — dashboard visible to all; admin actions require a password.
+- `public: false` — the whole dashboard requires a password (viewer token).
 
 ---
 
 ## Deployment
-
-### VPS Deployment (Current)
 
 ```bash
 # Backend
@@ -364,32 +393,52 @@ npm run build
 scp -r dist/* root@server:/var/www/orcid-tracker/
 ```
 
-For provider configuration and production env examples, see [server/.env.production.example](server/.env.production.example) and [docs/openrouter-deployment.md](docs/openrouter-deployment.md).
-
-### Caddy Configuration
-
 ```caddyfile
 orcid-tracker.szabolotnii.site, orcid-csbc.szabolotnii.site {
-  handle /api/* {
-    reverse_proxy 172.18.0.1:3001
-  }
-  handle {
-    reverse_proxy orcid-tracker:80
-  }
+  handle /api/* { reverse_proxy 172.18.0.1:3001 }
+  handle        { reverse_proxy orcid-tracker:80 }
 }
+```
+
+See [server/.env.production.example](server/.env.production.example), [docs/openrouter-deployment.md](docs/openrouter-deployment.md), and [docs/production-smoke-checklist.md](docs/production-smoke-checklist.md).
+
+**Smoke check** against a running API:
+
+```bash
+APP_BASE_URL=http://localhost:3001 SMOKE_TENANT_ID=default npm run smoke
 ```
 
 ---
 
-## License
+## Research & Citation
 
-MIT License - see [LICENSE](LICENSE) file.
+ResearchIQ is the practical instantiation of a broader engineering thesis: moving research administration from reactive bibliometric reporting to proactive, trustworthy AI-assisted management. The LaTeX manuscript, the Golden Record formalism, and the reproducible benchmark live in [`paper/`](paper/), and the system is framed as an instantiation of the **TRACE** framework for trustworthy agentic AI in operationally critical domains.
+
+If you use this work, please cite the repository and the accompanying manuscript (see [`paper/`](paper/)).
 
 ---
 
-## Contact
+## Contributing
 
-**Serhii Zabolotnii**  
-Professor, Cherkasy State Business College
+Contributions are welcome — this project is open source under MIT.
+
+1. **Fork & branch** from `main` (`feat/…`, `fix/…`).
+2. **Develop.** Keep the deterministic core deterministic: structured data → plain TypeScript; reserve the LLM for natural language.
+3. **Verify before pushing:**
+   ```bash
+   npm test && npm run lint && npm run typecheck && npm run build
+   ```
+   Add tests in `tests/` for any change to `services/goldenRecord.ts`, `services/dataMergeService.ts`, or `server/src/reportStats.ts`.
+4. **Open a PR** with a clear description; reference any related issue.
+
+Project conventions and architecture notes for automated/code agents are in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). Please don't commit real personal data — the benchmark is fully synthetic.
+
+---
+
+## License & Contact
+
+MIT License — see [LICENSE](LICENSE).
+
+**Serhii Zabolotnii** · Professor, Cherkasy State Business College
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?logo=linkedin)](https://www.linkedin.com/in/serhii-zabolotnii-45a95432/)
