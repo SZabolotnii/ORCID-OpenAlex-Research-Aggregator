@@ -26,3 +26,5 @@ dist-ssr
 server/package-lock.json
 csbc_faculty_data_new.json
 paper/build_xe/
+paper/**/build_xe/
+paper/itlt/build_xe/
