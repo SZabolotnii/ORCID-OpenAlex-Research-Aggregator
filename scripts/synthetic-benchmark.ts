@@ -435,6 +435,8 @@ interface RunResult {
   machineMs: number;
   manualMinutes: number;
   reviewPairs: number;
+  records: number;
+  dupDecisions: number;
 }
 
 // transparent manual-effort model (declared coefficients — a MODEL, not a human study)
@@ -518,6 +520,8 @@ function runUniversity(seed: number, cfg: GenConfig, method: ResolveMethod): Run
     machineMs,
     manualMinutes,
     reviewPairs,
+    records: totalRecords,
+    dupDecisions: totalDup,
   };
 }
 
@@ -545,10 +549,16 @@ function parseArgs() {
     const i = args.indexOf(flag);
     return i >= 0 && args[i + 1] ? Number(args[i + 1]) : def;
   };
+  const getStr = (flag: string, def: string) => {
+    const i = args.indexOf(flag);
+    return i >= 0 && args[i + 1] ? String(args[i + 1]) : def;
+  };
   return {
     seeds: get('--seeds', 30),
     sweepSeeds: get('--sweep-seeds', 12),
     researchers: get('--researchers', BASE_CONFIG.researchers),
+    departments: get('--departments', BASE_CONFIG.departments),
+    outDir: getStr('--outdir', 'paper/benchmark'),
     quick: args.includes('--quick'),
   };
 }
@@ -557,11 +567,11 @@ function main() {
   const opts = parseArgs();
   const K = opts.quick ? 5 : opts.seeds;
   const KS = opts.quick ? 4 : opts.sweepSeeds;
-  const cfg: GenConfig = { ...BASE_CONFIG, researchers: opts.researchers };
+  const cfg: GenConfig = { ...BASE_CONFIG, researchers: opts.researchers, departments: opts.departments };
   const methods: ResolveMethod[] = ['doi', 'titleyear', 'golden'];
   const methodLabel: Record<ResolveMethod, string> = { doi: 'DOI-only', titleyear: 'Title+Year', golden: 'Golden Record' };
 
-  const outDir = 'paper/benchmark';
+  const outDir = opts.outDir;
   mkdirSync(outDir, { recursive: true });
 
   let gitHash = 'unknown';
@@ -578,7 +588,7 @@ function main() {
   // ---- Main comparison (Table T1 + T2 + T3) ----
   const rawRows: string[] = ['seed,method,precision,recall,f1,b3f1,machine_ms,manual_min'];
   const perMethod: Record<string, Record<string, number[]>> = {};
-  for (const m of methods) perMethod[m] = { precision: [], recall: [], f1: [], b3f1: [], machineMs: [], manualMinutes: [], doiPresentRate: [], doiCorrectRate: [], yearAccRate: [], titleAccRate: [], legacyCollapseRate: [], reviewPairs: [] };
+  for (const m of methods) perMethod[m] = { precision: [], recall: [], f1: [], b3f1: [], machineMs: [], manualMinutes: [], doiPresentRate: [], doiCorrectRate: [], yearAccRate: [], titleAccRate: [], legacyCollapseRate: [], reviewPairs: [], records: [], dupDecisions: [] };
 
   for (let s = 0; s < K; s++) {
     const seed = 1000 + s;
@@ -596,6 +606,8 @@ function main() {
       perMethod[m].titleAccRate.push(r.titleAccRate);
       perMethod[m].legacyCollapseRate.push(r.legacyCollapseRate);
       perMethod[m].reviewPairs.push(r.reviewPairs);
+      perMethod[m].records.push(r.records);
+      perMethod[m].dupDecisions.push(r.dupDecisions);
       rawRows.push(`${seed},${m},${r.precision.toFixed(4)},${r.recall.toFixed(4)},${r.f1.toFixed(4)},${r.b3f1.toFixed(4)},${r.machineMs.toFixed(2)},${r.manualMinutes.toFixed(1)}`);
     }
   }
@@ -635,6 +647,12 @@ function main() {
   };
   const machine = meanCI(g.machineMs);
   const manual = meanCI(g.manualMinutes);
+  const recMean = meanCI(g.records).mean;
+  const dupMean = meanCI(g.dupDecisions).mean;
+  const gatheringMin = MANUAL_A * recMean;
+  const dedupMin = MANUAL_B * dupMean;
+  const fixedMin = MANUAL_C * cfg.departments;
+  const automatableMin = gatheringMin + dedupMin; // the part the engine replaces
   const t3 = {
     note: 'Engine time is dedup+fusion COMPUTE only (excludes network data retrieval). Manual effort is a transparent analytic MODEL with declared coefficients, not a human-subjects measurement.',
     engineSeconds: { mean: +(machine.mean / 1000).toFixed(3), ci: +(machine.ci / 1000).toFixed(3) },
@@ -642,6 +660,14 @@ function main() {
     manualHours: +(manual.mean / 60).toFixed(1),
     manualHoursPerDeptReport: +(manual.mean / cfg.departments / 60).toFixed(2),
     reviewPairsPerResearcher: +(meanCI(g.reviewPairs).mean / cfg.researchers).toFixed(1),
+    recordsPerUniversity: +recMean.toFixed(0),
+    dupDecisionsPerUniversity: +dupMean.toFixed(0),
+    manualBreakdownHours: {
+      gathering: +(gatheringMin / 60).toFixed(1),
+      dedupDecisions: +(dedupMin / 60).toFixed(1),
+      fixedFormatting: +(fixedMin / 60).toFixed(1),
+    },
+    automatableShare: +(automatableMin / manual.mean).toFixed(3), // fraction of modeled manual effort removed by automation
   };
   console.log('\n--- Table T2: Golden Record field completeness/accuracy (%, mean ± CI) ---');
   console.log(`DOI present: ${t2.doiPresentRate.mean}±${t2.doiPresentRate.ci}  | DOI correct: ${t2.doiCorrectRate.mean}±${t2.doiCorrectRate.ci}  | Year acc: ${t2.yearAccRate.mean}±${t2.yearAccRate.ci}  | Title acc: ${t2.titleAccRate.mean}±${t2.titleAccRate.ci}`);
