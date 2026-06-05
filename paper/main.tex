@@ -26,6 +26,12 @@
 
 \lstset{basicstyle=\ttfamily\small,breaklines=true}
 
+% TRACE-variant switch. Base manuscript keeps it OFF, so every \iftrace ... \fi
+% block in the shared sections renders nothing and this PDF is unchanged.
+% The TRACE-emphasis variant (main_trace.tex) sets \tracetrue.
+\newif\iftrace
+\tracefalse
+
 \begin{document}
 
 % ---- Core manuscript ----

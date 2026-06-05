@@ -81,3 +81,35 @@
 \caption{Структурна схема референсної архітектури інтеграції GenAI + CRIS}
 \label{fig:genai-cris-arch}
 \end{figure}
+
+\iftrace
+\subsection*{4.5. Архітектурний стрижень: чотиришарова рамка TRACE}
+
+Схема на рис.~\ref{fig:genai-cris-arch} описує \emph{потік даних}. Проте для довіреної агентної системи потрібен ще один зріз --- \emph{розподіл відповідальності й підстав для дій}. Цей зріз задає рамка TRACE~\cite{Zabolotnii2026TRACE}, у якій ту саму систему прочитано як чотири шари (рис.~\ref{fig:trace-arch}): \textbf{L1} --- детермінований не-навчений core (trust anchor); \textbf{L2} --- stateless-інвентар навчених компонентів, поділений на \textbf{L2a} (класичний ML) і \textbf{L2b} (LLM-валідатори); \textbf{L3} --- окрема stateful-політика оркестрації та ескалації; \textbf{L4} --- обмежений людський нагляд із вимірюваним навантаженням. Кожен шар має метрологічний аналог: L1~$\leftrightarrow$~traceability, L2~$\leftrightarrow$~calibration, L3~$\leftrightarrow$~staged qualification, L4~$\leftrightarrow$~operator supervision.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+  font=\small,
+  box/.style={draw, rounded corners, align=center, inner sep=5pt, minimum width=0.86\linewidth}
+]
+  \node[box, fill=blue!8] (l4) {\textbf{L4 — Обмежений людський нагляд} \,(\emph{operator supervision})\\\footnotesize admin override \;|\; audit-log \;|\; метрики RBI, OvR};
+  \node[box, below=4mm of l4, fill=orange!12] (l3) {\textbf{L3 — Політика ескалації (stateful)} \,(\emph{staged qualification})\\\footnotesize $\theta_{\mathrm{match}}/\theta_{\mathrm{review}}$ \;|\; fail-fast на конфлікті DOI \;|\; HITL-тригери \;|\; EP, TCC};
+  \node[box, below=4mm of l3, fill=green!8] (l2) {\textbf{L2 — Інвентар навчених компонентів (stateless)} \,(\emph{calibration})\\[3pt]
+    \footnotesize
+    \begin{tabular}{@{}p{0.37\linewidth}@{\hspace{4mm}}p{0.37\linewidth}@{}}
+      \textbf{L2a — класичний ML}\newline ER-скоринг: TF–IDF, Levenshtein, Jaccard; логіт $m(\cdot)$ &
+      \textbf{L2b — LLM-валідатори}\newline NL-запити, пояснення, перевірка галюцинацій \\
+    \end{tabular}};
+  \node[box, below=4mm of l2, fill=gray!12] (l1) {\textbf{L1 — Детермінований core} \,(\emph{trust anchor}, non-generative)\\\footnotesize \texttt{normalize\_doi} \;|\; жорсткі обмеження \;|\; provenance $\mathrm{prov}_a(c)$ \;|\; $\mathrm{ver}(\Theta)$};
+
+  \draw[-{Stealth[length=2.6mm]}, thick] (l1.north) -- (l2.south);
+  \draw[-{Stealth[length=2.6mm]}, thick] (l2.north) -- (l3.south);
+  \draw[-{Stealth[length=2.6mm]}, thick] (l3.north) -- (l4.south);
+\end{tikzpicture}
+\caption{ResearchIQ як інстанціація чотиришарової архітектури TRACE (зріз відповідальності). L2a обрано за замовчуванням; L2b застосовується лише там, де потрібне лінгвістичне розуміння free-form тексту.}
+\label{fig:trace-arch}
+\end{figure}
+
+Ключова відмінність від ad~hoc multi-agent підходу: \emph{вибір моделі} (L2) і \emph{політика виклику/ескалації} (L3) розведені в окремі шари, а \emph{правила} винесені в формально перевірюваний L1, а не «зашиті в промпт» LLM. Детальну пошарову декомпозицію ResearchIQ, явне рішення L2a-проти-L2b, підмножину trust-метрик і обчислення CPR наведено в розділі «Побудова ResearchIQ у рамках TRACE».
+\fi

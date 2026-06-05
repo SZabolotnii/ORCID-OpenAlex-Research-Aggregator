@@ -28,11 +28,20 @@ Notes:
 
 ## TRACE-emphasis variant
 
-`main_trace.tex` is a second, additive variant that emphasises the engineering of
-the system within the **TRACE** framework. It reuses every base section unchanged
-and only adds `sections/11_trace_engineering.tex` (a standalone chapter mapping
-ResearchIQ onto the TRACE layers L1–L4, the L2a/L2b parsimony split, the trust-metric
-subset and CPR) plus `references_trace.bib`. The base `main.tex` is untouched.
+`main_trace.tex` is a second variant that threads the **TRACE** line through the
+whole manuscript (problem statement → architecture → evaluation → conclusions),
+with the framework as the architectural backbone.
+
+Mechanism: a single switch `\newif\iftrace`. The base `main.tex` sets `\tracefalse`,
+so every `\iftrace ... \fi` block in the shared sections renders nothing and the
+base PDF is byte-identical. `main_trace.tex` sets `\tracetrue`, enabling:
+- woven TRACE blocks in the intro, methodology (§1.5), the reference architecture
+  (§4.5 + the four-layer figure `fig:trace-arch`), validation (§5.2) and conclusions;
+- a consolidated chapter `sections/11_trace_engineering.tex` (РОЗДІЛ 7) with the
+  layer decomposition, the L2a/L2b parsimony decision, the trust-metric subset and CPR;
+- the extra bibliography `references_trace.bib`.
+
+No section content is duplicated; the base variant output is unchanged.
 
 ```bash
 tectonic --keep-intermediates --keep-logs --reruns 2 -o build main_trace.tex
