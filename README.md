@@ -22,6 +22,7 @@ Aggregate faculty data from ORCID + OpenAlex (and optionally Scopus / Web of Sci
 ## Table of Contents
 
 - [Why ResearchIQ](#why-researchiq)
+- [What This Repository Contains](#what-this-repository-contains)
 - [Design Philosophy](#design-philosophy)
 - [Architecture](#architecture)
   - [System overview](#system-overview)
@@ -57,6 +58,24 @@ ResearchIQ automates the workflow end to end:
 5. **Generate** standardized reports (Scopus/WoS list, attestation card, accreditation) and fill custom templates.
 
 > **Origin.** Built for the [Vibe Coding with Gemini 3 Pro](https://www.kaggle.com/competitions/gemini-3) Kaggle competition (a 5-hour Google AI Studio prototype), then evolved into a full multi-tenant platform with a pi-agent backend and a deterministic reconciliation engine. [Read the writeup](https://www.kaggle.com/competitions/gemini-3/writeups/orcid-and-openalex-research-aggregator).
+
+---
+
+## What This Repository Contains
+
+This is the public source repository for **ResearchIQ**, not just an experiments dump. It contains:
+
+- the production-oriented **React frontend** and **Node/Express backend**;
+- the deterministic **Golden Record** Entity-Resolution engine used by the application;
+- the backend **agent tool layer** for research analytics over tenant data;
+- deterministic report-generation code and multi-tenant data handling;
+- a reproducible synthetic benchmark with tracked outputs in [`paper/benchmark/`](paper/benchmark/);
+- unit tests for the deterministic core in [`tests/`](tests/);
+- manuscript sources and submission artifacts in [`paper/`](paper/).
+
+In the accompanying ITLT manuscript, the repository supports the following claim: ResearchIQ is a software implementation of the proposed **TRACE-aligned methodology** for trustworthy AI-assisted research administration, while the benchmark and tests make the deterministic core independently reproducible.
+
+All code and documentation in this repository are released under the [MIT License](LICENSE).
 
 ---
 
@@ -320,7 +339,17 @@ npx tsx scripts/synthetic-benchmark.ts \
 
 It reports pairwise Precision/Recall/F1 and B³ F1, merged-field accuracy, engine compute time vs a transparent analytic manual-effort model, and sensitivity sweeps (mean ± 95% CI). Artifacts and the LaTeX manuscript are in [`paper/`](paper/).
 
-> The manual-effort figures are a **transparent analytic model with declared coefficients**, not a human-subjects measurement.
+Current tracked `faculty50` artifact (`paper/benchmark/faculty50/metrics_summary.json`, generated from code `9dcaa82`) reports:
+
+| Method | Precision | Recall | F1 | B³ F1 |
+|--------|-----------|--------|----|-------|
+| DOI-only | 100.00 ± 0.00 | 42.44 ± 1.40 | 59.50 ± 1.37 | 93.69 ± 0.16 |
+| Title+Year | 82.52 ± 1.40 | 38.87 ± 1.27 | 52.78 ± 1.32 | 92.61 ± 0.16 |
+| Golden Record | 87.82 ± 1.03 | 67.19 ± 1.26 | 76.08 ± 0.96 | 95.67 ± 0.15 |
+
+The same artifact estimates **71.5 hours** of manual effort for a 50-faculty, 4-department cycle using a transparent analytic model, while the measured engine time covers only local deduplication and fusion compute. These figures exclude network retrieval from ORCID/OpenAlex/Scopus.
+
+> The benchmark is synthetic and does not use private personal data. Any tracked demo faculty files are for application demonstration and should remain limited to public ORCID/OpenAlex-derived records.
 
 ---
 
@@ -412,7 +441,11 @@ APP_BASE_URL=http://localhost:3001 SMOKE_TENANT_ID=default npm run smoke
 
 ## Research & Citation
 
-ResearchIQ is the practical instantiation of a broader engineering thesis: moving research administration from reactive bibliometric reporting to proactive, trustworthy AI-assisted management. The LaTeX manuscript, the Golden Record formalism, and the reproducible benchmark live in [`paper/`](paper/), and the system is framed as an instantiation of the **TRACE** framework for trustworthy agentic AI in operationally critical domains.
+ResearchIQ is the practical instantiation of a broader engineering thesis: moving research administration from reactive bibliometric reporting to proactive, trustworthy AI-assisted management. This repository contains the full ResearchIQ application as a software implementation of that methodology: the React frontend, Node/Express backend, deterministic Golden Record engine, agent tool layer, reproducible benchmark, tests, and manuscript artifacts. The LaTeX manuscript, the Golden Record formalism, and the benchmark outputs live in [`paper/`](paper/), and the system is framed as an instantiation of the **TRACE** framework for trustworthy agentic AI in operationally critical domains.
+
+Suggested repository description for citation or reproducibility statements:
+
+> The open repository contains the full ResearchIQ source code as a software implementation of the proposed TRACE-aligned methodology (web application, server-side agent layer, deterministic Golden Record engine), together with reproducible synthetic benchmark scripts, unit tests, and manuscript artifacts; the materials are released under the MIT License.
 
 If you use this work, please cite the repository and the accompanying manuscript (see [`paper/`](paper/)).
 
@@ -431,7 +464,7 @@ Contributions are welcome — this project is open source under MIT.
    Add tests in `tests/` for any change to `services/goldenRecord.ts`, `services/dataMergeService.ts`, or `server/src/reportStats.ts`.
 4. **Open a PR** with a clear description; reference any related issue.
 
-Project conventions and architecture notes for automated/code agents are in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). Please don't commit real personal data — the benchmark is fully synthetic.
+Project conventions and architecture notes for automated/code agents are in [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md). Please don't commit private personal data. The benchmark is fully synthetic; any tracked demo faculty files are for application demonstration and should remain limited to public ORCID/OpenAlex-derived data.
 
 ---
 

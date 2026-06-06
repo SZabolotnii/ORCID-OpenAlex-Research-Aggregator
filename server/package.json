@@ -1,6 +1,7 @@
 {
   "name": "researchiq-agent-server",
   "version": "1.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "start": "node --env-file=.env dist/index.js",
