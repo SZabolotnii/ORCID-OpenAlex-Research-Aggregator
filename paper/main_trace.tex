@@ -1,0 +1,68 @@
+% Auto-assembled manuscript scaffold (Ayona) -- TRACE-emphasis variant.
+% This is a NEW variant. It does NOT modify the base manuscript (main.tex):
+% it reuses every existing section unchanged and only adds one new section
+% (sections/11_trace_engineering.tex) plus an extra bibliography (references_trace.bib).
+\documentclass[12pt,a4paper]{article}
+% Unicode + Cyrillic support (XeTeX/Tectonic-friendly)
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setotherlanguage{english}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{booktabs,longtable,array}
+\usepackage{enumitem}
+\usepackage{amsmath,amssymb}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+% References (BibTeX pipeline; works reliably with Tectonic)
+\usepackage[numbers]{natbib}
+
+\lstset{basicstyle=\ttfamily\small,breaklines=true}
+
+% TRACE-variant switch ON: every \iftrace ... \fi block in the shared sections
+% renders, weaving the TRACE line through the whole manuscript.
+\newif\iftrace
+\tracetrue
+
+\begin{document}
+
+% ---- Core manuscript (reused unchanged from the base variant) ----
+\input{sections/01_introduction}
+\input{sections/02_ch1_methodology}
+\input{sections/03_ch2_problem_field}
+\input{sections/04_ch3_genai_capabilities}
+\input{sections/05_ch4_integration_mechanisms}
+
+% Stage1/P0 strict formalism (inserted after chapter 4 mechanisms)
+\input{sections/04_golden_record_formalism}
+
+\input{sections/06_ch5_validation}
+
+\input{sections/07_ch6_risks_ethics}
+
+% ---- TRACE-emphasis addition (new in this variant) ----
+% Engineering justification of ResearchIQ as a TRACE instantiation.
+% Placed as a standalone chapter (РОЗДІЛ 7) before the conclusions so its
+% numbering does not collide with the existing chapters.
+\input{sections/11_trace_engineering}
+
+\input{sections/08_conclusions}
+
+% ---- Appendices ----
+\input{sections/09_appendix}
+
+% ---- References (base list + TRACE-specific additions) ----
+\bibliographystyle{unsrt}
+\bibliography{references,references_trace}
+
+\end{document}

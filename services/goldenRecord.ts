@@ -469,6 +469,11 @@ export function resolve(records: Publication[], method: ResolveMethod = 'golden'
   const recordDois = records.map((r) => canonicalizeDoi(r.doi));
   const uf = new UnionFind(n, recordDois);
   let reviewPairs = 0;
+  const reviewBand: Array<[number, number]> = [];
+  // Per-cluster-root signals derived below: weakest accepted-merge score, and
+  // whether the cluster carries an unresolved near-duplicate (review band).
+  const rootMinScore = new Map<number, number>();
+  const reviewRoots = new Set<number>();
 
   if (n > 1) {
     const pairs = candidatePairs(records);
@@ -489,7 +494,10 @@ export function resolve(records: Publication[], method: ResolveMethod = 'golden'
         score = ps.score;
         doiConflict = ps.doiConflict;
       }
-      if (method === 'golden' && score >= THETA_REVIEW && score < THETA_MATCH) reviewPairs++;
+      if (method === 'golden' && score >= THETA_REVIEW && score < THETA_MATCH) {
+        reviewPairs++;
+        reviewBand.push([i, j]);
+      }
       const threshold = method === 'golden' ? THETA_MATCH : 0.5;
       if (score >= threshold) scored.push({ i, j, score, doiConflict });
     }
@@ -497,6 +505,22 @@ export function resolve(records: Publication[], method: ResolveMethod = 'golden'
     for (const p of scored) {
       if (p.doiConflict) continue; // never auto-merge a hard DOI conflict
       uf.union(p.i, p.j);
+    }
+    // After clustering settles: record the weakest accepted-merge score per
+    // cluster root (a cluster is only as trustworthy as its loosest merge) ...
+    for (const p of scored) {
+      if (p.doiConflict) continue;
+      const ri = uf.find(p.i);
+      if (ri === uf.find(p.j)) {
+        const cur = rootMinScore.get(ri);
+        rootMinScore.set(ri, cur === undefined ? p.score : Math.min(cur, p.score));
+      }
+    }
+    // ... and flag clusters that have an unresolved near-duplicate (a review-band
+    // candidate that was NOT auto-merged) so a human can confirm/split it.
+    for (const [i, j] of reviewBand) {
+      reviewRoots.add(uf.find(i));
+      reviewRoots.add(uf.find(j));
     }
   }
 
@@ -512,11 +536,14 @@ export function resolve(records: Publication[], method: ResolveMethod = 'golden'
   const assignment = new Map<string, number>();
   const fused: Publication[] = [];
   let clusterId = 0;
-  for (const idxs of clusters.values()) {
+  for (const [root, idxs] of clusters) {
     const recs = idxs.map((i) => records[i]);
-    // best score within cluster (golden); 1 for baselines on merged clusters
-    const matchScore = recs.length > 1 ? 1 : 0;
-    fused.push(fuseCluster(recs, matchScore, false));
+    // matchScore = weakest accepted-merge confidence in the cluster; 0 for
+    // singletons. (Baselines union only on score==1, so merged clusters stay 1.)
+    const matchScore = recs.length > 1 ? rootMinScore.get(root) ?? 1 : 0;
+    // reviewFlag = cluster has an unresolved near-duplicate → surface for HITL.
+    const reviewFlag = reviewRoots.has(root);
+    fused.push(fuseCluster(recs, matchScore, reviewFlag));
     for (const i of idxs) assignment.set(records[i].putCode, clusterId);
     clusterId++;
   }

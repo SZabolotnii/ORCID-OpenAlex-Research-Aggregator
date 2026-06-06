@@ -1,0 +1,196 @@
+{
+  "generated": "2026-06-05T05:36:54.025Z",
+  "gitHash": "fd70a48",
+  "config": {
+    "researchers": 50,
+    "departments": 4,
+    "dupRate": 0.2,
+    "corruption": 1,
+    "K": 30,
+    "KS": 12,
+    "manualModel": {
+      "a": 2.5,
+      "b": 5,
+      "c": 45
+    }
+  },
+  "methodLabels": {
+    "doi": "DOI-only",
+    "titleyear": "Title+Year",
+    "golden": "Golden Record"
+  },
+  "t1_dedupQuality": {
+    "doi": {
+      "precision": {
+        "mean": 100,
+        "ci": 0
+      },
+      "recall": {
+        "mean": 42.44,
+        "ci": 1.4
+      },
+      "f1": {
+        "mean": 59.5,
+        "ci": 1.37
+      },
+      "b3f1": {
+        "mean": 93.69,
+        "ci": 0.16
+      }
+    },
+    "titleyear": {
+      "precision": {
+        "mean": 82.52,
+        "ci": 1.4
+      },
+      "recall": {
+        "mean": 38.87,
+        "ci": 1.27
+      },
+      "f1": {
+        "mean": 52.78,
+        "ci": 1.32
+      },
+      "b3f1": {
+        "mean": 92.61,
+        "ci": 0.16
+      }
+    },
+    "golden": {
+      "precision": {
+        "mean": 87.82,
+        "ci": 1.03
+      },
+      "recall": {
+        "mean": 67.19,
+        "ci": 1.26
+      },
+      "f1": {
+        "mean": 76.08,
+        "ci": 0.96
+      },
+      "b3f1": {
+        "mean": 95.67,
+        "ci": 0.15
+      }
+    }
+  },
+  "t2_fieldMetrics": {
+    "doiPresentRate": {
+      "mean": 45.58,
+      "ci": 1.05
+    },
+    "doiCorrectRate": {
+      "mean": 67.93,
+      "ci": 0.54
+    },
+    "yearAccRate": {
+      "mean": 80.8,
+      "ci": 0.38
+    },
+    "titleAccRate": {
+      "mean": 99.97,
+      "ci": 0.02
+    },
+    "legacyCollapseRate": {
+      "mean": 100,
+      "ci": 0
+    }
+  },
+  "t3_efficiency": {
+    "note": "Engine time is dedup+fusion COMPUTE only (excludes network data retrieval). Manual effort is a transparent analytic MODEL with declared coefficients, not a human-subjects measurement.",
+    "engineSeconds": {
+      "mean": 0.98,
+      "ci": 0.214
+    },
+    "manualMinutes": {
+      "mean": 4288.3,
+      "ci": 204.2
+    },
+    "manualHours": 71.5,
+    "manualHoursPerDeptReport": 17.87,
+    "reviewPairsPerResearcher": 56.7,
+    "recordsPerUniversity": 1167,
+    "dupDecisionsPerUniversity": 238,
+    "manualBreakdownHours": {
+      "gathering": 48.6,
+      "dedupDecisions": 19.9,
+      "fixedFormatting": 3
+    },
+    "automatableShare": 0.958
+  },
+  "f1_dupSweep": [
+    {
+      "dupRate": 0.1,
+      "f1": 70.84,
+      "f1_ci": 2.67,
+      "b3f1": 97.38,
+      "b3f1_ci": 0.27
+    },
+    {
+      "dupRate": 0.15,
+      "f1": 74.73,
+      "f1_ci": 2.27,
+      "b3f1": 96.63,
+      "b3f1_ci": 0.26
+    },
+    {
+      "dupRate": 0.2,
+      "f1": 76.08,
+      "f1_ci": 1.45,
+      "b3f1": 95.63,
+      "b3f1_ci": 0.24
+    },
+    {
+      "dupRate": 0.25,
+      "f1": 77.22,
+      "f1_ci": 2.32,
+      "b3f1": 94.89,
+      "b3f1_ci": 0.46
+    },
+    {
+      "dupRate": 0.3,
+      "f1": 79.52,
+      "f1_ci": 1.37,
+      "b3f1": 94.41,
+      "b3f1_ci": 0.28
+    }
+  ],
+  "f2_corruptionSweep": [
+    {
+      "corruption": 0.25,
+      "precision": 90.6,
+      "precision_ci": 1.04,
+      "recall": 80.27,
+      "recall_ci": 1.69
+    },
+    {
+      "corruption": 0.5,
+      "precision": 90.3,
+      "precision_ci": 2.77,
+      "recall": 76.72,
+      "recall_ci": 2.37
+    },
+    {
+      "corruption": 1,
+      "precision": 86.87,
+      "precision_ci": 2.4,
+      "recall": 68.91,
+      "recall_ci": 2.08
+    },
+    {
+      "corruption": 1.5,
+      "precision": 83.6,
+      "precision_ci": 2.05,
+      "recall": 59.71,
+      "recall_ci": 1.5
+    },
+    {
+      "corruption": 2,
+      "precision": 83.73,
+      "precision_ci": 2.21,
+      "recall": 51.49,
+      "recall_ci": 2.93
+    }
+  ]
+}

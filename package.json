@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "smoke": "node scripts/smoke-check.mjs",
     "benchmark": "npx tsx scripts/synthetic-benchmark.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx"
   },
@@ -26,6 +27,7 @@
     "@vitejs/plugin-react": "^5.0.0",
     "eslint": "^10.2.1",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "tsx": "^4.19.2",
     "typescript": "~5.8.2",
     "typescript-eslint": "^8.59.0",
     "vite": "^6.2.0"

@@ -27,7 +27,7 @@ npm start          # Run compiled server with --env-file=.env
 npx tsx scripts/import-csv.ts <csv-file> --tenant <id> --institution "Name"
 ```
 
-There is no unit/integration test runner. The baseline local verification flow is `npm run lint && npm run typecheck && npm run build`. `npm run smoke` is for live API sanity-checks (see README "Smoke Check" section for required `APP_BASE_URL` / `SMOKE_*` env vars).
+Unit tests use Node's built-in test runner (`node:test`) via `tsx` — run with `npm test` (specs live in `tests/*.test.ts` and cover the deterministic core: Golden Record entity resolution, the merge service, and report statistics). The baseline local verification flow is `npm test && npm run lint && npm run typecheck && npm run build`. `npm run smoke` is for live API sanity-checks (see README "Smoke Check" section for required `APP_BASE_URL` / `SMOKE_*` env vars).
 
 ## Environment Variables
 

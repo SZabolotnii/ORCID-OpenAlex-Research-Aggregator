@@ -24,8 +24,8 @@ export interface Publication {
 export interface Provenance {
   sources: DataSource[]; // all sources that contributed to this record
   fieldSources?: Partial<Record<string, DataSource>>; // which source won each fused field
-  matchScore?: number; // max pairwise score at which records were merged into this cluster
-  reviewFlag?: boolean; // true if any contributing merge fell in the HITL review band
+  matchScore?: number; // weakest accepted-merge score in the cluster (0 for singletons)
+  reviewFlag?: boolean; // true if the cluster has an unresolved near-duplicate (HITL review band)
   clusterSize?: number; // number of raw records fused into this Golden Record
 }
 

@@ -24,6 +24,15 @@ export type { ResolveMethod, ResolveResult } from './goldenRecord';
  * re-resolved — so cross-source duplicates collapse into a single Golden
  * Record with provenance, regardless of which source introduced them.
  */
+/**
+ * Golden Records flagged for human review — i.e. fused publications that have an
+ * unresolved near-duplicate (a candidate pair in the [θ_review, θ_match) band
+ * that the engine did NOT auto-merge). Surface these in the UI so an admin can
+ * confirm or split the merge (the HITL contour described in §5.3.4).
+ */
+export const reviewFlaggedPublications = (pubs: Publication[]): Publication[] =>
+  pubs.filter((p) => p.provenance?.reviewFlag === true);
+
 export const mergePublications = (
   existingPubs: Publication[],
   newPubs: Publication[],
