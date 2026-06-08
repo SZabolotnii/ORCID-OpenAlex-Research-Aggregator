@@ -235,6 +235,22 @@ export function scorePair(a: Publication, b: Publication): PairScore {
   return { score: sigmoid(z), doiConflict };
 }
 
+/**
+ * Unweighted fuzzy similarity baseline (no learned β weights, no DOI logic,
+ * no conflict guard) — represents a typical hand-rolled deduplicator built on
+ * the same content signals. Used only as an evaluation baseline so the paper can
+ * isolate the contribution of (1) expert-weighted logistic scoring and (2) the
+ * DOI-conflict guard, beyond the trivial DOI-only / Title+Year rules.
+ */
+export function scorePairFuzzy(a: Publication, b: Publication): number {
+  const titleCosine = tokenCosine(titleTokens(a.title), titleTokens(b.title));
+  const charSim = levRatio(canonicalizeTitle(a.title), canonicalizeTitle(b.title));
+  const authorJaccard = jaccard(authorKeySet(a.authors), authorKeySet(b.authors));
+  const yearAgree = Math.abs((a.year || 0) - (b.year || 0)) <= 1 ? 1 : 0;
+  const sim = (titleCosine + charSim + authorJaccard) / 3;
+  return yearAgree ? sim : sim * 0.5;
+}
+
 // ---------------------------------------------------------------------------
 // Blocking — generate candidate pairs without all-pairs O(n²) on large profiles
 // ---------------------------------------------------------------------------
@@ -446,7 +462,7 @@ function fuseCluster(recs: Publication[], matchScore: number, reviewFlag: boolea
 // ---------------------------------------------------------------------------
 // Resolution
 // ---------------------------------------------------------------------------
-export type ResolveMethod = 'golden' | 'doi' | 'titleyear';
+export type ResolveMethod = 'golden' | 'doi' | 'titleyear' | 'fuzzy';
 
 export interface ResolveResult {
   /** Fused Golden Records, one per cluster, sorted by year descending. */
@@ -489,6 +505,9 @@ export function resolve(records: Publication[], method: ResolveMethod = 'golden'
       } else if (method === 'titleyear') {
         const sameTitle = canonicalizeTitle(a.title) === canonicalizeTitle(b.title) && canonicalizeTitle(a.title) !== '';
         score = sameTitle && Math.abs(a.year - b.year) <= 1 ? 1 : 0;
+      } else if (method === 'fuzzy') {
+        // doiConflict stays false → no conflict guard (typical naive matcher)
+        score = scorePairFuzzy(a, b);
       } else {
         const ps = scorePair(a, b);
         score = ps.score;

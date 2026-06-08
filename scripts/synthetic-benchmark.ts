@@ -568,8 +568,8 @@ function main() {
   const K = opts.quick ? 5 : opts.seeds;
   const KS = opts.quick ? 4 : opts.sweepSeeds;
   const cfg: GenConfig = { ...BASE_CONFIG, researchers: opts.researchers, departments: opts.departments };
-  const methods: ResolveMethod[] = ['doi', 'titleyear', 'golden'];
-  const methodLabel: Record<ResolveMethod, string> = { doi: 'DOI-only', titleyear: 'Title+Year', golden: 'Golden Record' };
+  const methods: ResolveMethod[] = ['doi', 'titleyear', 'fuzzy', 'golden'];
+  const methodLabel: Record<ResolveMethod, string> = { doi: 'DOI-only', titleyear: 'Title+Year', fuzzy: 'Fuzzy (unweighted)', golden: 'Golden Record' };
 
   const outDir = opts.outDir;
   mkdirSync(outDir, { recursive: true });

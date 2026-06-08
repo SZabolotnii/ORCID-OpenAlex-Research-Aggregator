@@ -1,6 +1,6 @@
 {
-  "generated": "2026-06-08T05:28:50.403Z",
-  "gitHash": "34f2963",
+  "generated": "2026-06-08T07:49:58.006Z",
+  "gitHash": "13164fa",
   "config": {
     "researchers": 300,
     "departments": 20,
@@ -17,6 +17,7 @@
   "methodLabels": {
     "doi": "DOI-only",
     "titleyear": "Title+Year",
+    "fuzzy": "Fuzzy (unweighted)",
     "golden": "Golden Record"
   },
   "t1_dedupQuality": {
@@ -53,6 +54,24 @@
       },
       "b3f1": {
         "mean": 92.71,
+        "ci": 0.06
+      }
+    },
+    "fuzzy": {
+      "precision": {
+        "mean": 83.72,
+        "ci": 0.55
+      },
+      "recall": {
+        "mean": 41.06,
+        "ci": 0.41
+      },
+      "f1": {
+        "mean": 55.09,
+        "ci": 0.42
+      },
+      "b3f1": {
+        "mean": 92.89,
         "ci": 0.06
       }
     },
@@ -100,8 +119,8 @@
   "t3_efficiency": {
     "note": "Engine time is dedup+fusion COMPUTE only (excludes network data retrieval). Manual effort is a transparent analytic MODEL with declared coefficients, not a human-subjects measurement.",
     "engineSeconds": {
-      "mean": 1.582,
-      "ci": 0.148
+      "mean": 2.105,
+      "ci": 0.206
     },
     "manualMinutes": {
       "mean": 25745.3,

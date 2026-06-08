@@ -62,12 +62,17 @@
 \input{sections/04_conclusions}
 \input{sections/05_declarations}
 
-% ---- Appendix with full quantitative evaluation ----
-\input{sections/05_appendix}
-
+% ---- References before the appendix (ITLT/ДСТУ order). \clearpage flushes any
+%      pending floats so the bibliography and the appendix do not interleave. ----
+\clearpage
 % ---- References (IEEE; translated/transliterated; language tags included) ----
 \input{references_itlt}
 
+% ---- Appendix with full quantitative evaluation (at the very end) ----
+\clearpage
+\input{sections/05_appendix}
+
+\clearpage
 \begin{flushright}
 {\fontsize{10}{12}\selectfont Text of the article was accepted by Editorial Team \_\_.202\_}
 \end{flushright}

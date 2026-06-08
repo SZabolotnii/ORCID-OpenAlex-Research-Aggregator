@@ -39,8 +39,8 @@ SUBHEAD_PREFIXES = (
     "Аналіз останніх досліджень",
     "Мета і завдання статті",
     "Реактивна та проактивна",
-    "Архітектура інтеграції",
-    "TRACE-розподіл",
+    "Інженерна рамка TRACE",
+    "Функціональна архітектура ResearchIQ",
     "Золотий запис",
     "Дизайн оцінювання",
     "Загрози валідності",
@@ -228,7 +228,9 @@ def normalize_docx(input_path: Path, output_path: Path) -> None:
             ref_started = True
             continue
         if ref_started:
-            if text.startswith("Text of the article was accepted"):
+            # The reference list ends where the appendix or the editorial line
+            # begins; stop numbering there so appendix paragraphs are not prefixed.
+            if text.startswith("Text of the article was accepted") or text.startswith("ДОДАТОК"):
                 break
             if text and not text.startswith("["):
                 prefix = OxmlElement("w:r")
