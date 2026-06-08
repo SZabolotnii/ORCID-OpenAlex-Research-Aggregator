@@ -1,0 +1,48 @@
+% Standalone ResearchIQ application architecture figure for the ITLT variant.
+% Build: xelatex researchiq_app_architecture.tex
+\documentclass[border=6pt]{standalone}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setotherlanguage{english}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  node distance=5mm and 8mm,
+  box/.style={draw, rounded corners, align=center, inner sep=4pt, minimum height=9mm},
+  wide/.style={box, minimum width=35mm},
+  smallbox/.style={box, minimum width=30mm},
+  arrow/.style={-{Stealth[length=2.4mm]}, thick},
+  dashedarrow/.style={-{Stealth[length=2.4mm]}, thick, dashed}
+]
+  \node[wide, fill=blue!8] (user) {\textbf{Керівник / адміністратор}\\\footnotesize запити, контроль, експорт};
+  \node[wide, right=of user, fill=cyan!8] (spa) {\textbf{React SPA}\\\footnotesize dashboard, НПП, ORCID search\\chat, reports};
+  \node[wide, right=of spa, fill=orange!10] (api) {\textbf{Node.js / Express API}\\\footnotesize auth, tenant routing\\data and report endpoints};
+
+  \node[smallbox, below=7mm of api, xshift=-33mm, fill=gray!10] (tenant) {\textbf{Tenant storage}\\\footnotesize окремі JSON-набори\\для кожного ЗВО};
+  \node[smallbox, below=7mm of api, fill=green!10] (er) {\textbf{Golden Record}\\\footnotesize нормалізація, ER\\провенанс, HITL};
+  \node[smallbox, below=7mm of api, xshift=33mm, fill=purple!10] (agent) {\textbf{\texttt{pi-agent-core}}\\\footnotesize tool calling\\пояснення і звіти};
+
+  \node[smallbox, below=9mm of er, xshift=-35mm, fill=yellow!12] (sources) {\textbf{ORCID / OpenAlex / Scopus}\\\footnotesize профілі, праці, метрики};
+  \node[smallbox, below=9mm of er, xshift=35mm, fill=red!8] (llm) {\textbf{Gemini / OpenRouter}\\\footnotesize інтерпретація запиту\\без критичних рішень};
+
+  \draw[arrow] (user) -- (spa);
+  \draw[arrow] (spa) -- (api);
+  \draw[arrow] (api) -- (tenant);
+  \draw[arrow] (api) -- (er);
+  \draw[arrow] (api) -- (agent);
+  \draw[arrow] (sources) -- (er);
+  \draw[arrow] (er) -- (tenant);
+  \draw[arrow] (agent) -- (er);
+  \draw[dashedarrow] (agent) -- (llm);
+  \draw[dashedarrow] (llm) -- (agent);
+
+  \node[draw, rounded corners, fit=(api)(tenant)(er)(agent), inner sep=7pt,
+        label={[font=\bfseries]above:Серверний контур ResearchIQ}] {};
+\end{tikzpicture}
+\end{document}

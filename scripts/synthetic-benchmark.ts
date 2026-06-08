@@ -83,7 +83,7 @@ interface GenConfig {
   corruption: number; // global multiplier on all corruption probabilities
 }
 const BASE_CONFIG: GenConfig = {
-  researchers: 150,
+  researchers: 300,
   departments: 20,
   dupRate: 0.2,
   corruption: 1.0,

@@ -97,14 +97,29 @@ DOCX-convertible:
 cd paper/figures && xelatex arch_trace.tex   # regenerate arch_trace.pdf
 ```
 
-Build (XeLaTeX + BibTeX; IEEE references via `IEEEtran.bst` — install
-`texlive-publishers`):
+Build (XeLaTeX; final ITLT references are maintained manually in
+`references_itlt.tex` so that language tags, DOI/URL fields and the journal's
+`REFERENCES (TRANSLATED AND TRANSLITERATED)` heading survive exactly):
 
 ```bash
 cd paper/itlt_trace
-latexmk -xelatex -bibtex -interaction=nonstopmode -outdir=build_xe main.tex
+latexmk -xelatex -interaction=nonstopmode -outdir=build_xe main.tex
 cp -f build_xe/main.pdf ../artifacts/ResearchIQ_ITLT_TRACE.pdf
 ```
 
-Note: confirm the exact ITLT length/formatting limits with the editor; the
-front-matter UDC, ORCID and email are placeholders to be filled before submission.
+Submission DOCX:
+
+```bash
+cd paper/itlt_trace
+pandoc main.tex --from=latex --to=docx --resource-path=.:.. \
+  --reference-doc='../submission-rules/template_itlt_en 2026-OTH.docx' \
+  -o build_xe/main_raw.docx
+/opt/homebrew/bin/python3 scripts/normalize_itlt_docx.py \
+  build_xe/main_raw.docx \
+  ../artifacts/ResearchIQ_ITLT_TRACE_submission.docx
+```
+
+The normalizer enforces the ITLT Word constraints that Pandoc does not preserve
+reliably: A4, 2.5 cm margins, Times New Roman, single spacing, no page numbering
+or header/footer references, 10 pt abstract/reference blocks, first-line body
+indent, and numbered final references.

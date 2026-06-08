@@ -6,37 +6,49 @@
 \usepackage{polyglossia}
 \setmainlanguage{ukrainian}
 \setotherlanguage{english}
-\setmainfont{DejaVu Serif}
-\setsansfont{DejaVu Sans}
+\setmainfont{Times New Roman}
+\setsansfont{Times New Roman}
 \setmonofont{DejaVu Sans Mono}
+\newfontfamily\cyrillicfonttt{DejaVu Sans Mono}
 \usepackage{geometry}
 \geometry{margin=2.5cm}        % ITLT: all margins 2.5 cm
 \usepackage{setspace}
 \singlespacing                  % ITLT: single spacing
+\usepackage{titlesec}
 \usepackage{booktabs,longtable,array}
+\usepackage{float}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \graphicspath{{../figures/}}
-\usepackage[numbers,sort&compress]{natbib}
+\usepackage[numbers]{natbib}
 \usepackage{hyperref}
 \hypersetup{hidelinks}
-\setlength{\parindent}{1em}     % ITLT: first-line indent
+\setlength{\parindent}{1cm}     % ITLT: first-line indent
+\setlength{\parskip}{0pt}
+\pagestyle{empty}               % ITLT: no headers or page numbering
+\titleformat{\section}{\bfseries\fontsize{12}{14}\selectfont}{}
+  {0pt}{}
+\titlespacing*{\section}{0pt}{24pt}{12pt}
+\titleformat{\subsection}{\bfseries\fontsize{12}{14}\selectfont}{}
+  {0pt}{}
+\titlespacing*{\subsection}{0pt}{12pt}{6pt}
 
 \begin{document}
 
 % ---- Front matter (ITLT) ----
-\noindent УДК 378:001.89:004.8 \hfill
-
-\begin{center}
-{\large\bfseries ГЕНЕРАТИВНИЙ ШТУЧНИЙ ІНТЕЛЕКТ ТА АВТОНОМНІ АГЕНТИ В УПРАВЛІННІ НАУКОВОЮ ДІЯЛЬНІСТЮ ЗАКЛАДІВ ВИЩОЇ ОСВІТИ: КОНЦЕПТУАЛЬНА МОДЕЛЬ І ВІДТВОРЮВАНА АПРОБАЦІЯ}
-\end{center}
+\noindent{\fontsize{10}{12}\selectfont УДК 37:004:378:001.89}
 
 \vspace{0.5em}
-\noindent\textbf{Заболотній Сергій Васильович}\\
-доктор технічних наук, професор\\
-Черкаський державний бізнес-коледж, м.~Черкаси, Україна\\
-\textit{ORCID: 0000-0003-0242-2234}\\
-\textit{zabolotnii.serhii@csbc.edu.ua}
+\noindent{\fontsize{10}{12}\selectfont\textbf{Заболотній Сергій Васильович}}\\
+{\fontsize{10}{12}\selectfont Черкаський державний бізнес-коледж, м.~Черкаси, Україна}\\
+{\fontsize{10}{12}\selectfont ORCID ID: 0000-0003-0242-2234}\\
+{\fontsize{10}{12}\selectfont\textit{zabolotnii.serhii@csbc.edu.ua}}
+
+\vspace{1em}
+
+\begin{center}
+{\bfseries\fontsize{12}{14}\selectfont ГЕНЕРАТИВНИЙ ШТУЧНИЙ ІНТЕЛЕКТ ТА АВТОНОМНІ АГЕНТИ В УПРАВЛІННІ НАУКОВОЮ ДІЯЛЬНІСТЮ ЗАКЛАДІВ ВИЩОЇ ОСВІТИ: КОНЦЕПТУАЛЬНА МОДЕЛЬ І ВІДТВОРЮВАНА АПРОБАЦІЯ}
+\end{center}
 
 \vspace{1em}
 
@@ -48,12 +60,16 @@
 \input{sections/02_methods}
 \input{sections/03_findings}
 \input{sections/04_conclusions}
+\input{sections/05_declarations}
 
-% ---- References (IEEE; trimmed to <=30; >=40% Scopus/WoS; language tags handled in DOCX) ----
-\bibliographystyle{IEEEtran}
-\bibliography{references}
-
-% ---- Appendix (ДСТУ/ITLT convention: appendices go at the very end, after the reference list) ----
+% ---- Appendix with full quantitative evaluation ----
 \input{sections/05_appendix}
+
+% ---- References (IEEE; translated/transliterated; language tags included) ----
+\input{references_itlt}
+
+\begin{flushright}
+{\fontsize{10}{12}\selectfont Text of the article was accepted by Editorial Team \_\_.202\_}
+\end{flushright}
 
 \end{document}
