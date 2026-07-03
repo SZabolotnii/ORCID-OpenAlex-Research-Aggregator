@@ -9,6 +9,7 @@ the journal-facing Word layout rules deterministically.
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import tempfile
 import zipfile
@@ -17,6 +18,7 @@ from xml.etree import ElementTree as ET
 
 from docx import Document
 from docx.enum.section import WD_SECTION_START
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.text.paragraph import Paragraph
 from docx.oxml import OxmlElement
@@ -49,6 +51,53 @@ SUBHEAD_PREFIXES = (
     "А.3.",
     "А.4.",
 )
+
+TABLE_TEXT_WIDTH_DXA = 9000
+FEATURE_TABLE_ROWS = [
+    ("Ознака φ", "Вага β"),
+    ("Збіг DOI (doi_match)", "+3,0"),
+    ("Конфлікт DOI (doi_conflict)", "-5,0"),
+    ("Косинусна близькість назв, TF (title_cosine)", "+1,2"),
+    ("Символьна подібність, Левенштейн (char_sim)", "+0,8"),
+    ("Узгодженість року, |Δрік|≤1 (year_agree)", "+0,6"),
+    ("Жаккар за журналом (venue_jaccard)", "+0,4"),
+    ("Жаккар за авторами (author_jaccard)", "+0,9"),
+    ("Збіг URL (url_match)", "+0,2"),
+]
+DEDUP_TABLE_ROWS = [
+    ("Метод", "P", "R", "F1", "B³ F1"),
+    ("DOI-only", "100,0 ± 0,0", "42,6 ± 0,5", "59,7 ± 0,5", "93,7 ± 0,1"),
+    ("Title+Year", "83,3 ± 0,6", "39,4 ± 0,4", "53,5 ± 0,4", "92,7 ± 0,1"),
+    ("Fuzzy (незважений)", "83,7 ± 0,6", "41,1 ± 0,4", "55,1 ± 0,4", "92,9 ± 0,1"),
+    ("Golden Record", "88,2 ± 0,5", "68,1 ± 0,6", "76,8 ± 0,4", "95,8 ± 0,1"),
+]
+FIELD_TABLE_ROWS = [
+    ("Показник поля", "Значення"),
+    ("Наявність DOI (DOI present)", "45,4 ± 0,4"),
+    ("Коректність DOI (DOI correct)", "67,8 ± 0,2"),
+    ("Точність року (Year accuracy)", "80,9 ± 0,2"),
+    ("Точність назви (Title accuracy)", "99,95 ± 0,01"),
+]
+EFFICIENCY_TABLE_ROWS = [
+    ("Показник", "Значення"),
+    ("Середня кількість записів на ЗВО", "≈ 7056"),
+    ("Середня кількість рішень дедуплікації", "≈ 1441"),
+    ("Час рушія (дедуплікація+злиття, весь ЗВО)", "2,11 ± 0,21 с"),
+    ("Модель ручної праці (на ЗВО, рік)", "≈ 429,1 год"),
+    ("Модель ручної праці (на кафедральний звіт)", "≈ 21,45 год"),
+    ("Смуга HITL (на дослідника)", "≈ 56,5 пар"),
+]
+
+
+def sanitize_visible_text(text: str) -> str:
+    """Remove invisible copy artifacts and simple spacing defects."""
+    for char in ("\u200b", "\u200c", "\u200d", "\ufeff"):
+        text = text.replace(char, "")
+    return re.sub(r"\s+([.,;:!?])", r"\1", text)
+
+
+def set_xml_attr(element, name: str, value: str) -> None:
+    element.set(qn(f"w:{name}"), value)
 
 
 def set_run_font(run, size_pt: int | float, *, bold: bool | None = None, italic: bool | None = None) -> None:
@@ -140,16 +189,130 @@ def set_reference(paragraph) -> None:
     set_paragraph_font(paragraph, 10)
 
 
-def set_table_text(table) -> None:
+def table_column_widths(table) -> list[int]:
+    cols = len(table.columns)
+    if cols == 2:
+        first_header = table.rows[0].cells[0].text.strip()
+        if first_header.startswith("Ознака"):
+            return [6800, 2200]
+        return [5200, 3800]
+    if cols == 5:
+        return [2200, 1700, 1700, 1700, 1700]
+    base = TABLE_TEXT_WIDTH_DXA // max(cols, 1)
+    widths = [base] * cols
+    widths[-1] += TABLE_TEXT_WIDTH_DXA - sum(widths)
+    return widths
+
+
+def rewrite_table_rows(table, rows: list[tuple[str, ...]]) -> None:
+    for row, values in zip(table.rows, rows):
+        for cell, value in zip(row.cells, values):
+            cell.text = value
+
+
+def maybe_rewrite_known_table(table) -> None:
+    if len(table.columns) == 2 and len(table.rows) == len(FEATURE_TABLE_ROWS):
+        if table.rows[0].cells[0].text.strip().startswith("Ознака"):
+            rewrite_table_rows(table, FEATURE_TABLE_ROWS)
+            return
+    if len(table.columns) == 5 and len(table.rows) == len(DEDUP_TABLE_ROWS):
+        if table.rows[0].cells[0].text.strip().startswith("Метод"):
+            rewrite_table_rows(table, DEDUP_TABLE_ROWS)
+            return
+    if len(table.columns) == 2 and len(table.rows) == len(FIELD_TABLE_ROWS):
+        if table.rows[0].cells[0].text.strip().startswith("Показник поля"):
+            rewrite_table_rows(table, FIELD_TABLE_ROWS)
+            return
+    if len(table.columns) == 2 and len(table.rows) == len(EFFICIENCY_TABLE_ROWS):
+        if table.rows[0].cells[0].text.strip().startswith("Показник"):
+            rewrite_table_rows(table, EFFICIENCY_TABLE_ROWS)
+        return
+
+
+def set_table_borders(table) -> None:
+    tbl_pr = table._tbl.tblPr
+    if tbl_pr is None:
+        tbl_pr = OxmlElement("w:tblPr")
+        table._tbl.insert(0, tbl_pr)
+    borders = tbl_pr.find(qn("w:tblBorders"))
+    if borders is None:
+        borders = OxmlElement("w:tblBorders")
+        tbl_pr.append(borders)
+    for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        tag = qn(f"w:{edge}")
+        node = borders.find(tag)
+        if node is None:
+            node = OxmlElement(f"w:{edge}")
+            borders.append(node)
+        set_xml_attr(node, "val", "single")
+        set_xml_attr(node, "sz", "4")
+        set_xml_attr(node, "space", "0")
+        set_xml_attr(node, "color", "000000")
+
+
+def set_table_geometry(table, widths: list[int]) -> None:
+    table.autofit = False
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tbl_pr = table._tbl.tblPr
+    if tbl_pr is None:
+        tbl_pr = OxmlElement("w:tblPr")
+        table._tbl.insert(0, tbl_pr)
+    tbl_w = tbl_pr.find(qn("w:tblW"))
+    if tbl_w is None:
+        tbl_w = OxmlElement("w:tblW")
+        tbl_pr.append(tbl_w)
+    set_xml_attr(tbl_w, "type", "dxa")
+    set_xml_attr(tbl_w, "w", str(sum(widths)))
+
+    layout = tbl_pr.find(qn("w:tblLayout"))
+    if layout is None:
+        layout = OxmlElement("w:tblLayout")
+        tbl_pr.append(layout)
+    set_xml_attr(layout, "type", "fixed")
+
+    tbl_grid = table._tbl.find(qn("w:tblGrid"))
+    if tbl_grid is None:
+        tbl_grid = OxmlElement("w:tblGrid")
+        table._tbl.insert(1, tbl_grid)
+    for child in list(tbl_grid):
+        tbl_grid.remove(child)
+    for width in widths:
+        col = OxmlElement("w:gridCol")
+        set_xml_attr(col, "w", str(width))
+        tbl_grid.append(col)
+
     for row in table.rows:
-        for cell in row.cells:
+        for idx, cell in enumerate(row.cells):
+            width = widths[min(idx, len(widths) - 1)]
+            cell.width = Cm(width / 567)
+            tc_pr = cell._tc.get_or_add_tcPr()
+            tc_w = tc_pr.find(qn("w:tcW"))
+            if tc_w is None:
+                tc_w = OxmlElement("w:tcW")
+                tc_pr.append(tc_w)
+            set_xml_attr(tc_w, "type", "dxa")
+            set_xml_attr(tc_w, "w", str(width))
+
+
+def set_table_text(table) -> None:
+    maybe_rewrite_known_table(table)
+    widths = table_column_widths(table)
+    set_table_geometry(table, widths)
+    set_table_borders(table)
+    for row_idx, row in enumerate(table.rows):
+        for col_idx, cell in enumerate(row.cells):
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             for paragraph in cell.paragraphs:
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                if row_idx == 0 or col_idx > 0:
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                else:
+                    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 paragraph.paragraph_format.first_line_indent = Cm(0)
                 paragraph.paragraph_format.space_before = Pt(0)
                 paragraph.paragraph_format.space_after = Pt(0)
                 paragraph.paragraph_format.line_spacing = 1
-                set_paragraph_font(paragraph, 10)
+                bold = row_idx == 0 or row.cells[0].text.strip() == "Golden Record"
+                set_paragraph_font(paragraph, 10, bold=bold)
 
 
 def insert_paragraph_after(paragraph, text: str):
@@ -294,6 +457,9 @@ def strip_headers_footers_and_page_numbers(path: Path) -> None:
         ET.register_namespace("r", ns["r"])
         tree = ET.parse(document_xml)
         root = tree.getroot()
+        for text_node in root.findall(".//w:t", ns):
+            if text_node.text:
+                text_node.text = sanitize_visible_text(text_node.text)
         for sect in root.findall(".//w:sectPr", ns):
             for child in list(sect):
                 tag = child.tag.split("}", 1)[-1]
