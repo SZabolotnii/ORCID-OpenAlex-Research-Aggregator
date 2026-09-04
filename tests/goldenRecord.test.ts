@@ -137,3 +137,33 @@ test("baseline methods: doi merges only exact DOI; titleyear needs same title+ye
 test("thresholds are ordered as the formalism requires", () => {
   assert.ok(THETA_MATCH > THETA_REVIEW);
 });
+
+// --- parametric overrides (used by the sensitivity analysis) ----------------
+test("resolve honours a θ_match override without changing the defaults", () => {
+  // The borderline pair from the HITL test sits below the default θ_match=0.90.
+  const pair = () => [mk({ title: "neural network optimization" }), mk({ title: "neural network" })];
+  assert.equal(resolve(pair(), "golden").records.length, 2, "default θ must not merge");
+  assert.equal(
+    resolve(pair(), "golden", { thetaMatch: 0.8, thetaReview: 0.6 }).records.length,
+    1,
+    "a lower θ_match must merge the same pair"
+  );
+  assert.equal(THETA_MATCH, 0.9, "override must not mutate the published default");
+});
+
+test("resolve honours a θ_review override: the HITL band widens, merges do not change", () => {
+  const pair = () => [mk({ title: "neural network optimization" }), mk({ title: "neural network" })];
+  const strict = resolve(pair(), "golden", { thetaReview: 0.89 });
+  const loose = resolve(pair(), "golden", { thetaReview: 0.5 });
+  assert.equal(strict.records.length, loose.records.length, "θ_review must not affect merging");
+  assert.ok(loose.reviewPairs >= strict.reviewPairs);
+});
+
+test("scorePair honours a feature-weight override", () => {
+  const a = mk({ title: "spectral clustering of sparse graphs", year: 2021 });
+  const b = mk({ title: "spectral clustering of sparse graphs", year: 2021, sources: ["openalex"] });
+  const base = scorePair(a, b).score;
+  const damped = scorePair(a, b, { titleCosine: 0, charSim: 0 }).score;
+  assert.ok(damped < base, "zeroing the title features must lower the score");
+  assert.equal(scorePair(a, b).score, base, "override must not leak into later calls");
+});

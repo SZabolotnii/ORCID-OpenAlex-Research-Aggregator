@@ -195,6 +195,20 @@ export const FEATURE_WEIGHTS = {
 export const THETA_MATCH = 0.9;
 export const THETA_REVIEW = 0.7;
 
+export type FeatureWeights = Record<keyof typeof FEATURE_WEIGHTS, number>;
+
+/**
+ * Optional overrides for the matching thresholds and feature weights.
+ * Production always runs on the defaults; the overrides exist so the benchmark
+ * can sweep θ and perturb β to report the sensitivity analysis requested in
+ * review (justification of θ_match / θ_review and provenance of the weights).
+ */
+export interface ResolveOptions {
+  thetaMatch?: number;
+  thetaReview?: number;
+  weights?: Partial<FeatureWeights>;
+}
+
 function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
 }
@@ -204,7 +218,11 @@ export interface PairScore {
   doiConflict: boolean;
 }
 
-export function scorePair(a: Publication, b: Publication): PairScore {
+export function scorePair(
+  a: Publication,
+  b: Publication,
+  weights?: Partial<FeatureWeights>
+): PairScore {
   const da = canonicalizeDoi(a.doi);
   const db = canonicalizeDoi(b.doi);
   const doiMatch = !!da && !!db && da === db;
@@ -221,7 +239,7 @@ export function scorePair(a: Publication, b: Publication): PairScore {
   const hb = hostOf(b.url);
   const urlMatch = ha && hb && ha === hb ? 1 : 0;
 
-  const w = FEATURE_WEIGHTS;
+  const w: FeatureWeights = weights ? { ...FEATURE_WEIGHTS, ...weights } : FEATURE_WEIGHTS;
   const z =
     (doiMatch ? w.doiMatch : 0) +
     (doiConflict ? w.doiConflict : 0) +
@@ -480,7 +498,13 @@ export interface ResolveResult {
  *   - 'doi'       — DOI-only exact match (ablation baseline)
  *   - 'titleyear' — exact canonical title + |Δyear|≤1 (the legacy rule)
  */
-export function resolve(records: Publication[], method: ResolveMethod = 'golden'): ResolveResult {
+export function resolve(
+  records: Publication[],
+  method: ResolveMethod = 'golden',
+  options?: ResolveOptions
+): ResolveResult {
+  const thetaMatch = options?.thetaMatch ?? THETA_MATCH;
+  const thetaReview = options?.thetaReview ?? THETA_REVIEW;
   const n = records.length;
   const recordDois = records.map((r) => canonicalizeDoi(r.doi));
   const uf = new UnionFind(n, recordDois);
@@ -509,15 +533,15 @@ export function resolve(records: Publication[], method: ResolveMethod = 'golden'
         // doiConflict stays false → no conflict guard (typical naive matcher)
         score = scorePairFuzzy(a, b);
       } else {
-        const ps = scorePair(a, b);
+        const ps = scorePair(a, b, options?.weights);
         score = ps.score;
         doiConflict = ps.doiConflict;
       }
-      if (method === 'golden' && score >= THETA_REVIEW && score < THETA_MATCH) {
+      if (method === 'golden' && score >= thetaReview && score < thetaMatch) {
         reviewPairs++;
         reviewBand.push([i, j]);
       }
-      const threshold = method === 'golden' ? THETA_MATCH : 0.5;
+      const threshold = method === 'golden' ? thetaMatch : 0.5;
       if (score >= threshold) scored.push({ i, j, score, doiConflict });
     }
     scored.sort((x, y) => y.score - x.score);

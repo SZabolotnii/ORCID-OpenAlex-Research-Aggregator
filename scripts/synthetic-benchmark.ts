@@ -18,8 +18,15 @@
  */
 import { writeFileSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
-import { resolve as resolveER, canonicalizeTitle, canonicalizeDoi } from '../services/goldenRecord';
-import type { ResolveMethod } from '../services/goldenRecord';
+import {
+  resolve as resolveER,
+  canonicalizeTitle,
+  canonicalizeDoi,
+  FEATURE_WEIGHTS,
+  THETA_MATCH,
+  THETA_REVIEW,
+} from '../services/goldenRecord';
+import type { ResolveMethod, ResolveOptions, FeatureWeights } from '../services/goldenRecord';
 import { Publication, DataSource } from '../types';
 
 // ===========================================================================
@@ -444,7 +451,12 @@ const MANUAL_A = 2.5; // min per record to locate + verify
 const MANUAL_B = 5.0; // min per duplicate-resolution decision
 const MANUAL_C = 45; // min fixed setup/formatting per report
 
-function runUniversity(seed: number, cfg: GenConfig, method: ResolveMethod): RunResult {
+function runUniversity(
+  seed: number,
+  cfg: GenConfig,
+  method: ResolveMethod,
+  options?: ResolveOptions
+): RunResult {
   GLOBAL_ENTITY = 0;
   GLOBAL_RECORD = 0;
   const rng = mulberry32(seed);
@@ -468,7 +480,7 @@ function runUniversity(seed: number, cfg: GenConfig, method: ResolveMethod): Run
 
   for (const r of researchers) {
     const t0 = process.hrtime.bigint();
-    const res = resolveER(r.records, method);
+    const res = resolveER(r.records, method, options);
     const t1 = process.hrtime.bigint();
     machineMs += Number(t1 - t0) / 1e6;
     reviewPairs += res.reviewPairs;
@@ -560,6 +572,7 @@ function parseArgs() {
     departments: get('--departments', BASE_CONFIG.departments),
     outDir: getStr('--outdir', 'paper/benchmark'),
     quick: args.includes('--quick'),
+    sensitivity: args.includes('--sensitivity'),
   };
 }
 
@@ -724,4 +737,189 @@ function main() {
   console.log(`\nArtifacts written to ${outDir}/ (metrics_summary.json, metrics_raw.csv, config.json)\n`);
 }
 
-main();
+
+// ===========================================================================
+// Sensitivity analysis  (review round 1 — reviewer 2, items 1–3)
+//
+//   S1. θ_match sweep            — empirical justification of the auto-merge threshold
+//   S2. θ_review sweep           — cost of the HITL band at fixed θ_match
+//   S3. β one-at-a-time ±25 %    — the expert weights are not fine-tuned to a dataset
+//   S4. β joint random ±25 %     — robustness to simultaneous weight misspecification
+//   S5. manual-effort model ±50 % — the manual-hours figure is a model, not a measurement
+//
+// Run:  npx tsx scripts/synthetic-benchmark.ts --sensitivity
+// ===========================================================================
+const logOdds = (theta: number) => +Math.log(theta / (1 - theta)).toFixed(3);
+
+function aggregate(runs: RunResult[], researchers: number) {
+  const p = meanCI(runs.map((r) => r.precision));
+  const r = meanCI(runs.map((r) => r.recall));
+  const f = meanCI(runs.map((r) => r.f1));
+  const b = meanCI(runs.map((r) => r.b3f1));
+  const rev = meanCI(runs.map((x) => x.reviewPairs / researchers));
+  return {
+    precision: pct(p.mean), precision_ci: pct(p.ci),
+    recall: pct(r.mean), recall_ci: pct(r.ci),
+    f1: pct(f.mean), f1_ci: pct(f.ci),
+    b3f1: pct(b.mean), b3f1_ci: pct(b.ci),
+    reviewPairsPerResearcher: +rev.mean.toFixed(2),
+  };
+}
+
+function sensitivityMain() {
+  const opts = parseArgs();
+  const KS = opts.quick ? 3 : opts.sweepSeeds;
+  const cfg: GenConfig = { ...BASE_CONFIG, researchers: opts.researchers, departments: opts.departments };
+  const outDir = opts.outDir;
+  mkdirSync(outDir, { recursive: true });
+
+  let gitHash = 'unknown';
+  try {
+    gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    /* not a git checkout */
+  }
+
+  const t0 = Date.now();
+  console.log('\n=== ResearchIQ — Sensitivity Analysis (thresholds, weights, manual model) ===');
+  console.log(`Model university: ${cfg.researchers} researchers, ${cfg.departments} departments; KS=${KS} seeds per point; code @ ${gitHash}`);
+  console.log(`Defaults under test: θ_match=${THETA_MATCH}, θ_review=${THETA_REVIEW}\n`);
+
+  // ---- S1. θ_match sweep (θ_review pinned at the default, clamped ≤ θ_match) ----
+  console.log('--- S1. θ_match sweep (θ_review = min(0.70, θ_match)) ---');
+  const thetaMatchSweep: any[] = [];
+  for (const th of [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95]) {
+    const runs: RunResult[] = [];
+    for (let s = 0; s < KS; s++) {
+      runs.push(runUniversity(4000 + s, cfg, 'golden', { thetaMatch: th, thetaReview: Math.min(THETA_REVIEW, th) }));
+    }
+    const a = aggregate(runs, cfg.researchers);
+    thetaMatchSweep.push({ thetaMatch: th, betaPhi: logOdds(th), ...a });
+    console.log(`θ_match=${th.toFixed(2)} (β·φ=${logOdds(th)}): P=${a.precision}±${a.precision_ci}  R=${a.recall}±${a.recall_ci}  F1=${a.f1}±${a.f1_ci}  B³F1=${a.b3f1}  HITL/res=${a.reviewPairsPerResearcher}`);
+  }
+
+  // ---- S2. θ_review sweep at the default θ_match ----
+  console.log('\n--- S2. θ_review sweep at θ_match = 0.90 (HITL band cost) ---');
+  const thetaReviewSweep: any[] = [];
+  for (const tr of [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85]) {
+    const runs: RunResult[] = [];
+    for (let s = 0; s < KS; s++) {
+      runs.push(runUniversity(5000 + s, cfg, 'golden', { thetaMatch: THETA_MATCH, thetaReview: tr }));
+    }
+    const a = aggregate(runs, cfg.researchers);
+    thetaReviewSweep.push({ thetaReview: tr, betaPhi: logOdds(tr), ...a });
+    console.log(`θ_review=${tr.toFixed(2)} (β·φ=${logOdds(tr)}): HITL pairs/researcher=${a.reviewPairsPerResearcher}  (F1=${a.f1} — unchanged by construction)`);
+  }
+
+  // ---- S3. β one-at-a-time ±25 % ----
+  console.log('\n--- S3. β one-at-a-time ±25 % ---');
+  const baseRuns: RunResult[] = [];
+  for (let s = 0; s < KS; s++) baseRuns.push(runUniversity(6000 + s, cfg, 'golden'));
+  const base = aggregate(baseRuns, cfg.researchers);
+  console.log(`baseline (β as published): F1=${base.f1}±${base.f1_ci}  P=${base.precision}  R=${base.recall}`);
+
+  const betaOAT: any[] = [];
+  for (const key of Object.keys(FEATURE_WEIGHTS) as Array<keyof FeatureWeights>) {
+    for (const delta of [-0.25, 0.25]) {
+      const w: Partial<FeatureWeights> = { [key]: FEATURE_WEIGHTS[key] * (1 + delta) } as Partial<FeatureWeights>;
+      const runs: RunResult[] = [];
+      for (let s = 0; s < KS; s++) runs.push(runUniversity(6000 + s, cfg, 'golden', { weights: w }));
+      const a = aggregate(runs, cfg.researchers);
+      const row = {
+        feature: key,
+        baseWeight: FEATURE_WEIGHTS[key],
+        perturbedWeight: +(FEATURE_WEIGHTS[key] * (1 + delta)).toFixed(3),
+        delta: `${delta > 0 ? '+' : ''}${delta * 100}%`,
+        f1: a.f1,
+        deltaF1: +(a.f1 - base.f1).toFixed(2),
+        precision: a.precision,
+        recall: a.recall,
+      };
+      betaOAT.push(row);
+      console.log(`${String(key).padEnd(14)} ${row.delta.padStart(5)}: F1=${row.f1}  ΔF1=${row.deltaF1 > 0 ? '+' : ''}${row.deltaF1}`);
+    }
+  }
+  const maxAbsDelta = Math.max(...betaOAT.map((r) => Math.abs(r.deltaF1)));
+
+  // ---- S4. β joint random perturbation ±25 % ----
+  console.log('\n--- S4. β joint random perturbation ±25 % ---');
+  const trials = opts.quick ? 5 : 20;
+  const seedsPerTrial = opts.quick ? 2 : 4;
+  // Compare against the baseline restricted to the SAME seed subset, otherwise the
+  // difference would also carry seed-to-seed variance rather than the weight effect.
+  const baseSubset = aggregate(baseRuns.slice(0, seedsPerTrial), cfg.researchers);
+  const jointF1: number[] = [];
+  for (let t = 0; t < trials; t++) {
+    const rng = mulberry32(7000 + t);
+    const w: Partial<FeatureWeights> = {};
+    for (const key of Object.keys(FEATURE_WEIGHTS) as Array<keyof FeatureWeights>) {
+      w[key] = FEATURE_WEIGHTS[key] * (0.75 + 0.5 * rng());
+    }
+    const runs: RunResult[] = [];
+    for (let s = 0; s < seedsPerTrial; s++) runs.push(runUniversity(6000 + s, cfg, 'golden', { weights: w }));
+    const a = aggregate(runs, cfg.researchers);
+    jointF1.push(a.f1);
+  }
+  const jf = meanCI(jointF1);
+  const jointSummary = {
+    trials,
+    seedsPerTrial,
+    f1_mean: +jf.mean.toFixed(2),
+    f1_ci: +jf.ci.toFixed(2),
+    f1_min: +Math.min(...jointF1).toFixed(2),
+    f1_max: +Math.max(...jointF1).toFixed(2),
+    f1_baseline_sameSeeds: baseSubset.f1,
+    f1_baseline_allSeeds: base.f1,
+  };
+  console.log(`${trials} random weight vectors: F1 = ${jointSummary.f1_mean}±${jointSummary.f1_ci} (min ${jointSummary.f1_min}, max ${jointSummary.f1_max}); baseline on the same ${seedsPerTrial} seeds = ${baseSubset.f1}`);
+
+  // ---- S5. manual-effort model ±50 % ----
+  console.log('\n--- S5. manual-effort model ±50 % ---');
+  const records = Math.round(meanCI(baseRuns.map((r) => r.records)).mean);
+  const dupDecisions = Math.round(meanCI(baseRuns.map((r) => r.dupDecisions)).mean);
+  const manualHours = (a: number, b: number, c: number) =>
+    +((a * records + b * dupDecisions + c * cfg.departments) / 60).toFixed(1);
+  const baseHours = manualHours(MANUAL_A, MANUAL_B, MANUAL_C);
+  const manualSensitivity: any[] = [
+    { scenario: 'baseline (a=2.5, b=5, c=45)', hours: baseHours, deltaPct: 0 },
+  ];
+  const variants: Array<[string, number, number, number]> = [
+    ['a -50 %', MANUAL_A * 0.5, MANUAL_B, MANUAL_C],
+    ['a +50 %', MANUAL_A * 1.5, MANUAL_B, MANUAL_C],
+    ['b -50 %', MANUAL_A, MANUAL_B * 0.5, MANUAL_C],
+    ['b +50 %', MANUAL_A, MANUAL_B * 1.5, MANUAL_C],
+    ['c -50 %', MANUAL_A, MANUAL_B, MANUAL_C * 0.5],
+    ['c +50 %', MANUAL_A, MANUAL_B, MANUAL_C * 1.5],
+    ['all -50 %', MANUAL_A * 0.5, MANUAL_B * 0.5, MANUAL_C * 0.5],
+    ['all +50 %', MANUAL_A * 1.5, MANUAL_B * 1.5, MANUAL_C * 1.5],
+  ];
+  for (const [label, a, b, c] of variants) {
+    const h = manualHours(a, b, c);
+    manualSensitivity.push({ scenario: label, hours: h, deltaPct: +(((h - baseHours) / baseHours) * 100).toFixed(1) });
+  }
+  console.log(`records/university=${records}, duplicate decisions=${dupDecisions}, departments=${cfg.departments}`);
+  for (const row of manualSensitivity) console.log(`${row.scenario.padEnd(26)} ${String(row.hours).padStart(7)} h  (${row.deltaPct > 0 ? '+' : ''}${row.deltaPct} %)`);
+
+  // ---- Persist ----
+  const summary = {
+    generated: new Date().toISOString(),
+    gitHash,
+    config: { ...cfg, KS, defaults: { thetaMatch: THETA_MATCH, thetaReview: THETA_REVIEW, weights: FEATURE_WEIGHTS } },
+    s1_thetaMatchSweep: thetaMatchSweep,
+    s2_thetaReviewSweep: thetaReviewSweep,
+    s3_betaOneAtATime: { baseline: base, maxAbsDeltaF1: +maxAbsDelta.toFixed(2), rows: betaOAT },
+    s4_betaJointRandom: jointSummary,
+    s5_manualEffort: { records, dupDecisions, departments: cfg.departments, rows: manualSensitivity },
+  };
+  writeFileSync(`${outDir}/sensitivity_summary.json`, JSON.stringify(summary, null, 2));
+
+  const csv: string[] = ['sweep,parameter,value,precision,recall,f1,b3f1,hitl_pairs_per_researcher'];
+  for (const r of thetaMatchSweep) csv.push(`theta_match,theta_match,${r.thetaMatch},${r.precision},${r.recall},${r.f1},${r.b3f1},${r.reviewPairsPerResearcher}`);
+  for (const r of thetaReviewSweep) csv.push(`theta_review,theta_review,${r.thetaReview},${r.precision},${r.recall},${r.f1},${r.b3f1},${r.reviewPairsPerResearcher}`);
+  for (const r of betaOAT) csv.push(`beta_oat,${r.feature} ${r.delta},${r.perturbedWeight},${r.precision},${r.recall},${r.f1},,`);
+  writeFileSync(`${outDir}/sensitivity_raw.csv`, csv.join('\n'));
+  console.log(`\nArtifacts written to ${outDir}/ (sensitivity_summary.json, sensitivity_raw.csv) in ${((Date.now() - t0) / 1000).toFixed(0)}s\n`);
+}
+
+if (parseArgs().sensitivity) sensitivityMain();
+else main();

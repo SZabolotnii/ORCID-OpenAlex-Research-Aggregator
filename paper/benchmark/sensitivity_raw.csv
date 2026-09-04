@@ -1,0 +1,35 @@
+sweep,parameter,value,precision,recall,f1,b3f1,hitl_pairs_per_researcher
+theta_match,theta_match,0.5,9.3,68.35,16.37,67.43,0
+theta_match,theta_match,0.55,9.3,68.35,16.37,67.43,0
+theta_match,theta_match,0.6,9.37,68.35,16.47,67.68,0
+theta_match,theta_match,0.65,9.63,68.31,16.88,68.61,0
+theta_match,theta_match,0.7,10.12,68.27,17.62,70.06,0
+theta_match,theta_match,0.75,11.19,68.21,19.22,72.82,18.13
+theta_match,theta_match,0.8,17.81,68.07,28.2,81.75,41.78
+theta_match,theta_match,0.85,56.6,68.02,61.73,92.89,51.9
+theta_match,theta_match,0.9,87.49,67.8,76.39,95.71,53.42
+theta_match,theta_match,0.95,98.1,61.84,75.85,95.77,54.15
+theta_review,theta_review,0.5,88.27,68.19,76.94,95.8,91.73
+theta_review,theta_review,0.55,88.27,68.19,76.94,95.8,91.73
+theta_review,theta_review,0.6,88.27,68.19,76.94,95.8,86.06
+theta_review,theta_review,0.65,88.27,68.19,76.94,95.8,69.17
+theta_review,theta_review,0.7,88.27,68.19,76.94,95.8,54
+theta_review,theta_review,0.75,88.27,68.19,76.94,95.8,35.68
+theta_review,theta_review,0.8,88.27,68.19,76.94,95.8,11.68
+theta_review,theta_review,0.85,88.27,68.19,76.94,95.8,1.55
+beta_oat,doiMatch -25%,2.25,87.04,68.03,76.36,,
+beta_oat,doiMatch +25%,3.75,87.04,68.03,76.36,,
+beta_oat,doiConflict -25%,-3.75,87.04,68.03,76.36,,
+beta_oat,doiConflict +25%,-6.25,87.04,68.03,76.36,,
+beta_oat,titleCosine -25%,0.9,87.61,67.5,76.24,,
+beta_oat,titleCosine +25%,1.5,84.96,68.31,75.73,,
+beta_oat,charSim -25%,0.6,87.39,67.82,76.36,,
+beta_oat,charSim +25%,1,86.06,68.31,76.16,,
+beta_oat,yearAgree -25%,0.45,87.49,68.04,76.54,,
+beta_oat,yearAgree +25%,0.75,85.38,68.03,75.71,,
+beta_oat,venueJaccard -25%,0.3,87.33,68.03,76.48,,
+beta_oat,venueJaccard +25%,0.5,86.31,68.04,76.08,,
+beta_oat,authorJaccard -25%,0.675,87.23,68,76.42,,
+beta_oat,authorJaccard +25%,1.125,86.72,68.1,76.29,,
+beta_oat,urlMatch -25%,0.15,87.22,68.03,76.43,,
+beta_oat,urlMatch +25%,0.25,86.8,68.03,76.27,,
