@@ -56,7 +56,7 @@ axL.set_xlabel("Поріг автоматичного злиття θ_match")
 axL.set_ylabel("Метрика, %")
 axL.set_ylim(0, 105)
 axL.set_title("Якість дедуплікації залежно від θ_match")
-axL.legend(fontsize=9, loc="lower left")
+axL.legend(fontsize=9, loc="upper left", framealpha=0.9)
 
 # --- right: HITL load vs theta_review ---
 rw = S["s2_thetaReviewSweep"]
