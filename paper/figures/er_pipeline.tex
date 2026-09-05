@@ -1,0 +1,86 @@
+% Standalone five-step Entity-Resolution pipeline figure (ITLT revision, reviewer 2, item 6).
+% Build: xelatex er_pipeline.tex  → er_pipeline.pdf   (PNG: pdftoppm -r 300 -png)
+\documentclass[border=6pt]{standalone}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setotherlanguage{english}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  node distance=5mm,
+  stepbox/.style={draw, rounded corners, align=center, inner sep=5pt, minimum width=8.2cm, fill=gray!8},
+  src/.style={draw, rounded corners=2pt, align=center, inner sep=4pt, minimum width=2.0cm, fill=blue!8, font=\footnotesize},
+  dec/.style={draw, diamond, aspect=2.6, align=center, inner sep=1pt, fill=orange!14, font=\footnotesize},
+  outbox/.style={draw, rounded corners, align=center, inner sep=6pt, minimum width=8.2cm, fill=green!12},
+  side/.style={draw, rounded corners, align=center, inner sep=5pt, minimum width=3.4cm, font=\footnotesize},
+  ar/.style={-{Stealth[length=2.6mm]}, thick},
+  lbl/.style={font=\scriptsize, inner sep=1.5pt, fill=white}
+]
+
+% --- sources ---
+\node[src] (orcid) {ORCID};
+\node[src, right=4mm of orcid] (oa) {OpenAlex};
+\node[src, right=4mm of oa] (sc) {Scopus};
+\node[src, right=4mm of sc] (wos) {Web of Science};
+\node[draw=gray!60, dashed, rounded corners, fit=(orcid)(wos), inner sep=4pt] (sources) {};
+\node[font=\footnotesize\itshape, above=1mm of sources] {Сирі записи про публікації з різних джерел};
+
+% --- steps 1-3 ---
+\node[stepbox, below=7mm of sources] (s1) {\textbf{Крок 1. Канонізація сигнатури}\\[1pt]
+  \footnotesize DOI $\to$ нижній регістр, зняття префіксів, валідація \;|\; назва: NFKC + casefold\\
+  \footnotesize \textbf{зі збереженням кирилиці} \;|\; автори: транслітерація кирилиця\,$\to$\,латиниця};
+
+\node[stepbox, below=of s1] (s2) {\textbf{Крок 2. Блокування} \,\footnotesize(уникнення $O(n^2)$ порівнянь)\\[1pt]
+  \footnotesize блоки: точний DOI \;|\; два найдовші токени назви \;|\; «рік + токен»};
+
+\node[stepbox, below=of s2] (s3) {\textbf{Крок 3. Парне логістичне зіставлення}\\[2pt]
+  $\mathrm{score}=\sigma(\boldsymbol{\beta}\cdot\boldsymbol{\phi})$\\[1pt]
+  \footnotesize ознаки $\boldsymbol{\phi}$: збіг/конфлікт DOI, косинус назв, Левенштейн, рік, журнал, автори, URL};
+
+% --- decision ---
+\node[dec, below=8mm of s3] (d) {порівняння score};
+
+% --- branches ---
+\node[side, below=16mm of d, xshift=-4.9cm, fill=red!8] (drop) {\textbf{Відкинути}\\[1pt] різні праці};
+\node[side, below=16mm of d, xshift=4.9cm, fill=orange!12] (hitl) {\textbf{Смуга HITL}\\[1pt] ручна перевірка експертом};
+
+% --- steps 4-5 ---
+\node[stepbox, below=46mm of d] (s4) {\textbf{Крок 4. Кластеризація з охоронцем конфлікту DOI}\\[1pt]
+  \footnotesize зв'язні компоненти за ребрами $\mathrm{score}\ge\theta_{\mathrm{match}}$;\\
+  \footnotesize два кластери з непорожніми неперетинними наборами DOI \textbf{не зливаються}};
+
+\node[stepbox, below=of s4] (s5) {\textbf{Крок 5. Злиття атрибутів і провенанс}\\[1pt]
+  \footnotesize голосування, зважене за надійністю джерела (Scopus/WoS $\succ$ OpenAlex $\succ$ ORCID)\\
+  \footnotesize пріоритет полів: DOI $\succ$ Crossref $\succ$ CRIS $\succ$ OpenAlex $\succ$ ORCID \;|\; провенанс W3C~PROV};
+
+\node[outbox, below=of s5] (gold) {\textbf{«Золотий запис» (Golden Record)}\\[1pt]
+  \footnotesize канонічна праця з простежуваністю кожного поля та значенням matchScore};
+
+% --- arrows ---
+\draw[ar] (sources.south) -- (s1.north);
+\draw[ar] (s1) -- (s2);
+\draw[ar] (s2) -- (s3);
+\draw[ar] (s3) -- (d);
+
+% left branch: reject
+\draw[ar] (d.west) -- ++(-2.2,0) node[lbl, above, pos=0.55] {$\mathrm{score}<\theta_{\mathrm{review}}=0{,}70$} -| (drop.north);
+% right branch: HITL band
+\draw[ar] (d.east) -- ++(2.2,0) node[lbl, above, pos=0.55] {$\mathrm{score}\in[0{,}70;\,0{,}90)$} -| (hitl.north);
+% centre: auto-merge
+\draw[ar] (d.south) -- node[lbl, pos=0.22, align=center] {$\mathrm{score}\ge\theta_{\mathrm{match}}=0{,}90$\\[-1pt]\footnotesize автоматичне злиття} (s4.north);
+% resolved HITL decisions re-enter clustering
+\draw[ar, dashed] (hitl.south) |- ([yshift=8mm]s4.north east) -- ([xshift=-8mm]s4.north east);
+\node[lbl, anchor=east, font=\scriptsize\itshape] at ([xshift=-10mm, yshift=11mm]s4.north east) {рішення експерта};
+
+\draw[ar] (s4) -- (s5);
+\draw[ar] (s5) -- (gold);
+
+\end{tikzpicture}
+\end{document}

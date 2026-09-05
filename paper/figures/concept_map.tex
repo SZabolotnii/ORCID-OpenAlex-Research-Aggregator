@@ -1,0 +1,67 @@
+% Standalone concept map of the paper's terminology (ITLT revision, reviewer 1, item 6:
+% "не показано, як поняття співвідносяться між собою").
+% Build: xelatex concept_map.tex  → concept_map.pdf   (PNG: pdftoppm -r 200 -png)
+\documentclass[border=6pt]{standalone}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setotherlanguage{english}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,decorations.pathreplacing,calc}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  node distance=6mm,
+  band/.style={draw, rounded corners, align=center, inner sep=6pt, minimum width=12.6cm},
+  half/.style={draw, rounded corners, align=center, inner sep=5pt, minimum width=5.5cm},
+  role/.style={font=\footnotesize\itshape, align=right, text width=2.6cm},
+  ar/.style={-{Stealth[length=2.6mm]}, thick},
+  lbl/.style={font=\scriptsize, inner sep=2pt, fill=white, align=center}
+]
+
+% --- Level 1: the widest frame ---
+\node[band, fill=blue!8] (l1) {\textbf{Цифрова трансформація наукового адміністрування ЗВО}\\[1pt]
+  \footnotesize перепроєктування управлінських практик навколо даних, а не автоматизація наявних процедур};
+
+% --- Level 2: reactive vs proactive ---
+\node[half, below=14mm of l1.south, xshift=-3.7cm, fill=red!7] (react) {\textbf{Реактивна модель}\\[1pt]
+  \footnotesize звітність \emph{post factum} наприкінці\\ \footnotesize звітного періоду};
+\node[half, below=14mm of l1.south, xshift=3.7cm, fill=green!10] (proact) {\textbf{Проактивне управління}\\[1pt]
+  \footnotesize наукометричні дані як безперервний\\ \footnotesize керований потік, актуальний будь-коли};
+
+\node[band, below=6mm of react.south, xshift=3.7cm, fill=gray!6, minimum width=12.6cm] (scientom)
+  {\footnotesize\textbf{«Наукометричне управління»} --- аналітичний зріз, спільний для обох моделей: добір показників і оцінювання результативності.\\
+   \footnotesize Моделі різняться не показниками, а \textbf{режимом} їх отримання; предметом цієї статті є перехід \emph{реактивна\,$\to$\,проактивна}};
+
+% --- Level 3: RIM / CRIS ---
+\node[band, below=9mm of scientom, fill=blue!6] (rim) {\textbf{Управління дослідницькою інформацією (RIM) / системи CRIS}\\[1pt]
+  \footnotesize організаційна форма функції: облік публікацій, проєктів, авторів \;|\; стандарт CERIF, ініціативи OpenAIRE/EOSC};
+
+% --- Level 4: data trustworthiness ---
+\node[band, below=9mm of rim, fill=gray!10] (er) {\textbf{Розв'язання сутностей (Entity Resolution) $\Rightarrow$ «Золотий запис» (Golden Record)}\\[1pt]
+  \footnotesize канонізація, блокування, парне зіставлення, кластеризація, провенанс \;|\; смуга ручної перевірки (HITL)};
+
+% --- Level 5: agent layer ---
+\node[band, below=9mm of er, fill=orange!10] (agent) {\textbf{Агентний шар: генеративний ШІ + автономний агент (MCP)}\\[1pt]
+  \footnotesize природномовний інтерфейс керівника до перевірених даних; викликає типізовані інструменти,\\
+  \footnotesize \textbf{не ухвалює критичних рішень} щодо тотожності публікацій};
+
+% --- vertical relations ---
+\draw[ar] (l1.south) -- node[lbl] {реалізується як зміна режиму управління науковою діяльністю} ($(react.north)!0.5!(proact.north)$);
+\draw[ar] (react) -- node[lbl, above] {перехід} (proact);
+\draw[ar] (rim.north) -- node[lbl] {організаційна форма проактивного управління} (scientom.south);
+\draw[ar] (er.north) -- node[lbl] {передумова: єдиний достовірний ресурс замість фрагментованих записів} (rim.south);
+\draw[ar] (agent.north) -- node[lbl] {інтерфейс доступу до результатів консолідації} (er.south);
+
+% --- TRACE bracket on the right ---
+\draw[decorate, decoration={brace, amplitude=5pt}, thick, gray!70]
+  ([xshift=4mm]agent.south east) -- ([xshift=4mm]er.north east)
+  node[midway, right=4mm, align=left, font=\footnotesize, text=black, text width=3.4cm]
+  {\textbf{Рамка TRACE}\\ розподіляє ці компоненти по шарах: L1 --- детерміноване ядро, L2a --- класичний ML, L2b --- LLM-валідатор, L3/L4 --- ескалація й нагляд людини};
+
+\end{tikzpicture}
+\end{document}
