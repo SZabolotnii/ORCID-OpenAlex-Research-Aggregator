@@ -136,7 +136,7 @@ def new_para(doc, anchor, text, before=False, style_from=None, colour=BLUE):
     return par
 
 
-def replace_across_runs(par, old, new):
+def replace_across_runs(par, old, new, colour=BLUE):
     """Replace `old` with `new` even when the phrase is split over several runs."""
     from docx.text.run import Run
     runs = [Run(r, par) for r in par._p.findall(".//" + W + "r")]
@@ -158,7 +158,8 @@ def replace_across_runs(par, old, new):
         lo, hi = max(i, a) - a, min(j, b) - a
         if first:
             r.text = r.text[:lo] + new + r.text[hi:]
-            r.font.color.rgb = BLUE
+            if colour is not None:
+                r.font.color.rgb = colour
             first = False
         else:
             r.text = r.text[:lo] + r.text[hi:]
@@ -381,6 +382,16 @@ def main():
             while replace_across_runs(par, a, b):
                 fixed += 1
     print(f"terminology replacements: {fixed}")
+
+    # ---- 15. proof-reading (R1-5): hyphen used as a dash after the DOCX conversion ----
+    dashes = 0
+    variants = [" - ", "\u00a0- ", " -\u00a0", "\u00a0-\u00a0"]   # incl. non-breaking spaces
+    for par in doc.paragraphs:
+        for v in variants:
+            repl = v.replace("-", "\u2014")
+            while replace_across_runs(par, v, repl, colour=None):
+                dashes += 1
+    print(f"hyphen -> em dash: {dashes}")
 
     doc.save(DST)
     print(f"written {DST}")
