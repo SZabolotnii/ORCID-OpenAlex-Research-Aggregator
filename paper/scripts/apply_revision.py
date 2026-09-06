@@ -274,6 +274,8 @@ def main():
     a = para_by_prefix(doc, "Отже, на перетині трьох напрямів")
     set_text(a, T["review_1"])
     p = new_para(doc, a, T["review_2"], style_from=body_style)
+    # national ranking mechanism launched while the manuscript was under review
+    p = new_para(doc, p, T["review_nsd"], style_from=body_style)
     p = new_para(doc, p, T["review_3"], style_from=body_style)
     cap = caption_block(doc, p, "Таблиця 1", T["t1_title"], tnum_style, tname_style)
     tbl = new_table(doc, cap, T["t1_rows"], tbl_template, cell_rpr)
