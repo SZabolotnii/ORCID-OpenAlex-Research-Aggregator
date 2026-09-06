@@ -12,6 +12,7 @@ The source text of the fragments is paper/reviews/round1-2026-09-04/07_revision-
 Run: python3 paper/scripts/apply_revision.py
 """
 import copy
+import os
 import re
 import sys
 from docx import Document
@@ -238,6 +239,17 @@ def caption_block(doc, anchor, number_text, title_text, num_style, name_style):
 
 # --------------------------------------------------------------------------
 def main():
+    # The built DOCX has been hand-edited in Word since it was last generated
+    # (editorial and stylistic pass, 2026-09-06). Regenerating would silently
+    # discard those edits, so an existing file is never overwritten by accident.
+    if os.path.exists(DST) and "--force" not in sys.argv:
+        sys.exit(
+            f"{DST} already exists and carries manual edits made in Word.\n"
+            "Regenerating would discard them. Re-run with --force only if you\n"
+            "have back-ported those edits into revision_texts.py, or write to a\n"
+            "different path and diff the two files first."
+        )
+
     doc = Document(SRC)
 
     # ---- 0. renumber every existing figure/table reference -----------------
