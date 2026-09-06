@@ -5,7 +5,7 @@ TEXTS = {
 # ---------------------------------------------------------------- abstract
 "abstract": (
 "Анотація. Цифрова трансформація наукового адміністрування закладів вищої освіти стримується "
-"фрагментацією наукометричних даних між ORCID, Scopus, Web of Science та OpenAlex. Неузгодженість "
+"фрагментацією наукометричних даних між ORCID, Scopus, Web of Science та іншими базами. Неузгодженість "
 "ідентифікаторів, транслітерацій і метаданих призводить до появи дублікатів у звітності, а її "
 "підготовка потребує значної ручної верифікації. Мета статті — обґрунтувати модель проактивного "
 "управління науковою діяльністю ЗВО засобами ІКТ, у якій достовірність первинних даних "
@@ -30,7 +30,7 @@ TEXTS = {
 "abstract_en": (
 "Abstract. The digital transformation of research administration in higher education institutions "
 "is hindered by the fragmentation of scientometric data across ORCID, Scopus, Web of Science, and "
-"OpenAlex. Inconsistent identifiers, transliterations, and metadata generate duplicate records in "
+"other databases. Inconsistent identifiers, transliterations, and metadata generate duplicate records in "
 "institutional reporting, and preparing that reporting requires substantial manual verification. "
 "The aim of the article is to substantiate an ICT-based model of proactive research management in "
 "a higher education institution, in which the trustworthiness of primary data is ensured by a "
@@ -90,7 +90,7 @@ TEXTS = {
 "[27]. Система враховує лише підтверджені результати, і саме за ними формуються загальний "
 "рейтинг дослідників та окремий рейтинг молодих учених. Це переносить задачу консолідації "
 "первинних записів із площини внутрішнього обліку закладу в площину зовнішнього оцінювання: "
-"розбіжності між ORCID, OpenAlex, Scopus і Web of Science, які раніше позначалися лише на "
+"розбіжності між ORCID, Scopus, Web of Science та іншими базами, які раніше позначалися лише на "
 "якості внутрішньої звітності, тепер визначають повноту відомостей, поданих до національної "
 "системи. Механізм, запропонований у цій статті, адресує саме цю передумову; водночас "
 "відповідність його результатів правилам верифікації Національної системи дослідників у цій "

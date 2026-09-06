@@ -377,6 +377,12 @@ def main():
     repl = {
         "ізолює tenant-дані": "розмежовує дані закладів (орендарів)",
         "tenant-сховище": "сховище з розмежуванням за закладами",
+        # the source enumeration is left open-ended: OpenAlex stays named where it
+        # is the actual referent (architecture, field priority, study [24]), not here
+        "реферативними базами Scopus і Web of Science та відкритою базою OpenAlex":
+            "реферативними базами Scopus і Web of Science та іншими базами",
+        "(ORCID, Scopus, Web of Science, OpenAlex)":
+            "(ORCID, Scopus, Web of Science та інші бази)",
     }
     fixed = 0
     for par in doc.paragraphs:
