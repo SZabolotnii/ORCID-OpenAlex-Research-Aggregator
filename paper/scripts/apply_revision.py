@@ -12,6 +12,7 @@ The source text of the fragments is paper/reviews/round1-2026-09-04/07_revision-
 Run: python3 paper/scripts/apply_revision.py
 """
 import copy
+import os
 import re
 import sys
 from docx import Document
@@ -238,6 +239,17 @@ def caption_block(doc, anchor, number_text, title_text, num_style, name_style):
 
 # --------------------------------------------------------------------------
 def main():
+    # The built DOCX has been hand-edited in Word since it was last generated
+    # (editorial and stylistic pass, 2026-09-06). Regenerating would silently
+    # discard those edits, so an existing file is never overwritten by accident.
+    if os.path.exists(DST) and "--force" not in sys.argv:
+        sys.exit(
+            f"{DST} already exists and carries manual edits made in Word.\n"
+            "Regenerating would discard them. Re-run with --force only if you\n"
+            "have back-ported those edits into revision_texts.py, or write to a\n"
+            "different path and diff the two files first."
+        )
+
     doc = Document(SRC)
 
     # ---- 0. renumber every existing figure/table reference -----------------
@@ -274,6 +286,8 @@ def main():
     a = para_by_prefix(doc, "Отже, на перетині трьох напрямів")
     set_text(a, T["review_1"])
     p = new_para(doc, a, T["review_2"], style_from=body_style)
+    # national ranking mechanism launched while the manuscript was under review
+    p = new_para(doc, p, T["review_nsd"], style_from=body_style)
     p = new_para(doc, p, T["review_3"], style_from=body_style)
     cap = caption_block(doc, p, "Таблиця 1", T["t1_title"], tnum_style, tname_style)
     tbl = new_table(doc, cap, T["t1_rows"], tbl_template, cell_rpr)
@@ -375,6 +389,12 @@ def main():
     repl = {
         "ізолює tenant-дані": "розмежовує дані закладів (орендарів)",
         "tenant-сховище": "сховище з розмежуванням за закладами",
+        # the source enumeration is left open-ended: OpenAlex stays named where it
+        # is the actual referent (architecture, field priority, study [24]), not here
+        "реферативними базами Scopus і Web of Science та відкритою базою OpenAlex":
+            "реферативними базами Scopus і Web of Science та іншими базами",
+        "(ORCID, Scopus, Web of Science, OpenAlex)":
+            "(ORCID, Scopus, Web of Science та інші бази)",
     }
     fixed = 0
     for par in doc.paragraphs:
