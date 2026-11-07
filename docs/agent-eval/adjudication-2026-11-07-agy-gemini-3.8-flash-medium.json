@@ -1,0 +1,7 @@
+{
+  "_note": "Manual review of every answer whose strict automatic score disagreed with the reference (2026-11-07). correct = the answer states the reference value; wrong = the answer states a different value.",
+  "oa:0000-0002-4769-3620": { "verdict": "correct", "note": "Table row 'Публікацій у відкритому доступі' = 0; the scorer took the preceding total (26) as the first figure." },
+  "year:0000-0001-6904-3496:2021": { "verdict": "wrong", "note": "States 2 publications in 2021, reference 3. The agent counted the 10 most recent works in the snapshot instead of calling search_local_publications." },
+  "agg:withScopus": { "verdict": "correct", "note": "States 6 staff; the scorer took the context figure 35 (all staff) as the first figure." },
+  "agg:zero": { "verdict": "correct", "note": "States 9 staff; the scorer took the context figure 35 (all staff) as the first figure." }
+}

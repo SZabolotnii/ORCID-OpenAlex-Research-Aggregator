@@ -1,0 +1,1035 @@
+[
+ {
+  "id": "total:0000-0003-4660-5083",
+  "template": "total",
+  "query": "Скільки всього публікацій має Serhiy Kuksenko?",
+  "oracle": {
+   "kind": "number",
+   "value": 53
+  }
+ },
+ {
+  "id": "scopus:0000-0003-4660-5083",
+  "template": "scopus",
+  "query": "Скільки публікацій Serhiy Kuksenko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0003-4660-5083:2011",
+  "template": "year",
+  "query": "Скільки публікацій Serhiy Kuksenko вийшло у 2011 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2011
+  }
+ },
+ {
+  "id": "oa:0000-0003-4660-5083",
+  "template": "open_access",
+  "query": "Скільки публікацій Serhiy Kuksenko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-0185-6762",
+  "template": "total",
+  "query": "Скільки всього публікацій має Tamila Zalozna?",
+  "oracle": {
+   "kind": "number",
+   "value": 7
+  }
+ },
+ {
+  "id": "scopus:0000-0002-0185-6762",
+  "template": "scopus",
+  "query": "Скільки публікацій Tamila Zalozna індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-0185-6762:2020",
+  "template": "year",
+  "query": "Скільки публікацій Tamila Zalozna вийшло у 2020 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 2,
+   "year": 2020
+  }
+ },
+ {
+  "id": "oa:0000-0002-0185-6762",
+  "template": "open_access",
+  "query": "Скільки публікацій Tamila Zalozna у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0009-0007-2864-9193",
+  "template": "total",
+  "query": "Скільки всього публікацій має Yuliia Getmanenko?",
+  "oracle": {
+   "kind": "number",
+   "value": 21
+  }
+ },
+ {
+  "id": "scopus:0009-0007-2864-9193",
+  "template": "scopus",
+  "query": "Скільки публікацій Yuliia Getmanenko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0009-0007-2864-9193:2015",
+  "template": "year",
+  "query": "Скільки публікацій Yuliia Getmanenko вийшло у 2015 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 5,
+   "year": 2015
+  }
+ },
+ {
+  "id": "oa:0009-0007-2864-9193",
+  "template": "open_access",
+  "query": "Скільки публікацій Yuliia Getmanenko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-4769-3620",
+  "template": "total",
+  "query": "Скільки всього публікацій має Iryna Ivanova?",
+  "oracle": {
+   "kind": "number",
+   "value": 26
+  }
+ },
+ {
+  "id": "scopus:0000-0002-4769-3620",
+  "template": "scopus",
+  "query": "Скільки публікацій Iryna Ivanova індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-4769-3620:2022",
+  "template": "year",
+  "query": "Скільки публікацій Iryna Ivanova вийшло у 2022 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 2,
+   "year": 2022
+  }
+ },
+ {
+  "id": "oa:0000-0002-4769-3620",
+  "template": "open_access",
+  "query": "Скільки публікацій Iryna Ivanova у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-1558-9618",
+  "template": "total",
+  "query": "Скільки всього публікацій має Viktor Zdir?",
+  "oracle": {
+   "kind": "number",
+   "value": 24
+  }
+ },
+ {
+  "id": "scopus:0000-0002-1558-9618",
+  "template": "scopus",
+  "query": "Скільки публікацій Viktor Zdir індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-1558-9618:2023",
+  "template": "year",
+  "query": "Скільки публікацій Viktor Zdir вийшло у 2023 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 2,
+   "year": 2023
+  }
+ },
+ {
+  "id": "oa:0000-0002-1558-9618",
+  "template": "open_access",
+  "query": "Скільки публікацій Viktor Zdir у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0001-5281-2017",
+  "template": "total",
+  "query": "Скільки всього публікацій має Роксолана Бреус?",
+  "oracle": {
+   "kind": "number",
+   "value": 8
+  }
+ },
+ {
+  "id": "scopus:0000-0001-5281-2017",
+  "template": "scopus",
+  "query": "Скільки публікацій Роксолана Бреус індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0001-5281-2017:2021",
+  "template": "year",
+  "query": "Скільки публікацій Роксолана Бреус вийшло у 2021 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2021
+  }
+ },
+ {
+  "id": "oa:0000-0001-5281-2017",
+  "template": "open_access",
+  "query": "Скільки публікацій Роксолана Бреус у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-0791-1312",
+  "template": "total",
+  "query": "Скільки всього публікацій має Oleksandr Protsenko?",
+  "oracle": {
+   "kind": "number",
+   "value": 16
+  }
+ },
+ {
+  "id": "scopus:0000-0002-0791-1312",
+  "template": "scopus",
+  "query": "Скільки публікацій Oleksandr Protsenko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-0791-1312:2012",
+  "template": "year",
+  "query": "Скільки публікацій Oleksandr Protsenko вийшло у 2012 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2012
+  }
+ },
+ {
+  "id": "oa:0000-0002-0791-1312",
+  "template": "open_access",
+  "query": "Скільки публікацій Oleksandr Protsenko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-2093-1270",
+  "template": "total",
+  "query": "Скільки всього публікацій має Vladyslav Khotunov?",
+  "oracle": {
+   "kind": "number",
+   "value": 21
+  }
+ },
+ {
+  "id": "scopus:0000-0002-2093-1270",
+  "template": "scopus",
+  "query": "Скільки публікацій Vladyslav Khotunov індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-2093-1270:undefined",
+  "template": "year",
+  "query": "Скільки публікацій Vladyslav Khotunov вийшло у undefined році?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "oa:0000-0002-2093-1270",
+  "template": "open_access",
+  "query": "Скільки публікацій Vladyslav Khotunov у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0003-1655-3091",
+  "template": "total",
+  "query": "Скільки всього публікацій має Stanislav V. Marchenko?",
+  "oracle": {
+   "kind": "number",
+   "value": 2
+  }
+ },
+ {
+  "id": "scopus:0000-0003-1655-3091",
+  "template": "scopus",
+  "query": "Скільки публікацій Stanislav V. Marchenko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0003-1655-3091:2015",
+  "template": "year",
+  "query": "Скільки публікацій Stanislav V. Marchenko вийшло у 2015 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2015
+  }
+ },
+ {
+  "id": "oa:0000-0003-1655-3091",
+  "template": "open_access",
+  "query": "Скільки публікацій Stanislav V. Marchenko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-3656-7717",
+  "template": "total",
+  "query": "Скільки всього публікацій має Olha Voloshchenko?",
+  "oracle": {
+   "kind": "number",
+   "value": 2
+  }
+ },
+ {
+  "id": "scopus:0000-0002-3656-7717",
+  "template": "scopus",
+  "query": "Скільки публікацій Olha Voloshchenko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-3656-7717:2023",
+  "template": "year",
+  "query": "Скільки публікацій Olha Voloshchenko вийшло у 2023 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2023
+  }
+ },
+ {
+  "id": "oa:0000-0002-3656-7717",
+  "template": "open_access",
+  "query": "Скільки публікацій Olha Voloshchenko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-3121-6221",
+  "template": "total",
+  "query": "Скільки всього публікацій має Nataliya Kuznetsova?",
+  "oracle": {
+   "kind": "number",
+   "value": 54
+  }
+ },
+ {
+  "id": "scopus:0000-0002-3121-6221",
+  "template": "scopus",
+  "query": "Скільки публікацій Nataliya Kuznetsova індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 1
+  }
+ },
+ {
+  "id": "year:0000-0002-3121-6221:2023",
+  "template": "year",
+  "query": "Скільки публікацій Nataliya Kuznetsova вийшло у 2023 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 2,
+   "year": 2023
+  }
+ },
+ {
+  "id": "oa:0000-0002-3121-6221",
+  "template": "open_access",
+  "query": "Скільки публікацій Nataliya Kuznetsova у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0003-2461-8342",
+  "template": "total",
+  "query": "Скільки всього публікацій має Tetiana Borovyk Тетяна Боровик?",
+  "oracle": {
+   "kind": "number",
+   "value": 28
+  }
+ },
+ {
+  "id": "scopus:0000-0003-2461-8342",
+  "template": "scopus",
+  "query": "Скільки публікацій Tetiana Borovyk Тетяна Боровик індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0003-2461-8342:2021",
+  "template": "year",
+  "query": "Скільки публікацій Tetiana Borovyk Тетяна Боровик вийшло у 2021 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 5,
+   "year": 2021
+  }
+ },
+ {
+  "id": "oa:0000-0003-2461-8342",
+  "template": "open_access",
+  "query": "Скільки публікацій Tetiana Borovyk Тетяна Боровик у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 15
+  }
+ },
+ {
+  "id": "total:0000-0002-7317-9633",
+  "template": "total",
+  "query": "Скільки всього публікацій має Iryna Dernova?",
+  "oracle": {
+   "kind": "number",
+   "value": 28
+  }
+ },
+ {
+  "id": "scopus:0000-0002-7317-9633",
+  "template": "scopus",
+  "query": "Скільки публікацій Iryna Dernova індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-7317-9633:2020",
+  "template": "year",
+  "query": "Скільки публікацій Iryna Dernova вийшло у 2020 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2020
+  }
+ },
+ {
+  "id": "oa:0000-0002-7317-9633",
+  "template": "open_access",
+  "query": "Скільки публікацій Iryna Dernova у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-1735-613X",
+  "template": "total",
+  "query": "Скільки всього публікацій має Olha Rylova?",
+  "oracle": {
+   "kind": "number",
+   "value": 31
+  }
+ },
+ {
+  "id": "scopus:0000-0002-1735-613X",
+  "template": "scopus",
+  "query": "Скільки публікацій Olha Rylova індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 1
+  }
+ },
+ {
+  "id": "year:0000-0002-1735-613X:2023",
+  "template": "year",
+  "query": "Скільки публікацій Olha Rylova вийшло у 2023 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 6,
+   "year": 2023
+  }
+ },
+ {
+  "id": "oa:0000-0002-1735-613X",
+  "template": "open_access",
+  "query": "Скільки публікацій Olha Rylova у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0003-0188-2677",
+  "template": "total",
+  "query": "Скільки всього публікацій має Robert Pustoviit?",
+  "oracle": {
+   "kind": "number",
+   "value": 84
+  }
+ },
+ {
+  "id": "scopus:0000-0003-0188-2677",
+  "template": "scopus",
+  "query": "Скільки публікацій Robert Pustoviit індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0003-0188-2677:2005",
+  "template": "year",
+  "query": "Скільки публікацій Robert Pustoviit вийшло у 2005 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 7,
+   "year": 2005
+  }
+ },
+ {
+  "id": "oa:0000-0003-0188-2677",
+  "template": "open_access",
+  "query": "Скільки публікацій Robert Pustoviit у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0001-5065-9004",
+  "template": "total",
+  "query": "Скільки всього публікацій має Інна Розломій?",
+  "oracle": {
+   "kind": "number",
+   "value": 81
+  }
+ },
+ {
+  "id": "scopus:0000-0001-5065-9004",
+  "template": "scopus",
+  "query": "Скільки публікацій Інна Розломій індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0001-5065-9004:2020",
+  "template": "year",
+  "query": "Скільки публікацій Інна Розломій вийшло у 2020 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 6,
+   "year": 2020
+  }
+ },
+ {
+  "id": "oa:0000-0001-5065-9004",
+  "template": "open_access",
+  "query": "Скільки публікацій Інна Розломій у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0001-6904-3496",
+  "template": "total",
+  "query": "Скільки всього публікацій має Oleg Kuklin?",
+  "oracle": {
+   "kind": "number",
+   "value": 33
+  }
+ },
+ {
+  "id": "scopus:0000-0001-6904-3496",
+  "template": "scopus",
+  "query": "Скільки публікацій Oleg Kuklin індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 1
+  }
+ },
+ {
+  "id": "year:0000-0001-6904-3496:2021",
+  "template": "year",
+  "query": "Скільки публікацій Oleg Kuklin вийшло у 2021 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 3,
+   "year": 2021
+  }
+ },
+ {
+  "id": "oa:0000-0001-6904-3496",
+  "template": "open_access",
+  "query": "Скільки публікацій Oleg Kuklin у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0001-6150-864X",
+  "template": "total",
+  "query": "Скільки всього публікацій має Mykhailo Kryvoruchko?",
+  "oracle": {
+   "kind": "number",
+   "value": 24
+  }
+ },
+ {
+  "id": "scopus:0000-0001-6150-864X",
+  "template": "scopus",
+  "query": "Скільки публікацій Mykhailo Kryvoruchko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0001-6150-864X:2016",
+  "template": "year",
+  "query": "Скільки публікацій Mykhailo Kryvoruchko вийшло у 2016 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 3,
+   "year": 2016
+  }
+ },
+ {
+  "id": "oa:0000-0001-6150-864X",
+  "template": "open_access",
+  "query": "Скільки публікацій Mykhailo Kryvoruchko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-6650-328X",
+  "template": "total",
+  "query": "Скільки всього публікацій має Nadiya Azmuk?",
+  "oracle": {
+   "kind": "number",
+   "value": 88
+  }
+ },
+ {
+  "id": "scopus:0000-0002-6650-328X",
+  "template": "scopus",
+  "query": "Скільки публікацій Nadiya Azmuk індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 1
+  }
+ },
+ {
+  "id": "year:0000-0002-6650-328X:2009",
+  "template": "year",
+  "query": "Скільки публікацій Nadiya Azmuk вийшло у 2009 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 2,
+   "year": 2009
+  }
+ },
+ {
+  "id": "oa:0000-0002-6650-328X",
+  "template": "open_access",
+  "query": "Скільки публікацій Nadiya Azmuk у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 21
+  }
+ },
+ {
+  "id": "total:0000-0001-6939-9097",
+  "template": "total",
+  "query": "Скільки всього публікацій має Iryna Mihus?",
+  "oracle": {
+   "kind": "number",
+   "value": 250
+  }
+ },
+ {
+  "id": "scopus:0000-0001-6939-9097",
+  "template": "scopus",
+  "query": "Скільки публікацій Iryna Mihus індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 4
+  }
+ },
+ {
+  "id": "year:0000-0001-6939-9097:2016",
+  "template": "year",
+  "query": "Скільки публікацій Iryna Mihus вийшло у 2016 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 8,
+   "year": 2016
+  }
+ },
+ {
+  "id": "oa:0000-0001-6939-9097",
+  "template": "open_access",
+  "query": "Скільки публікацій Iryna Mihus у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0001-5825-0684",
+  "template": "total",
+  "query": "Скільки всього публікацій має Liudmyla Doloka?",
+  "oracle": {
+   "kind": "number",
+   "value": 3
+  }
+ },
+ {
+  "id": "scopus:0000-0001-5825-0684",
+  "template": "scopus",
+  "query": "Скільки публікацій Liudmyla Doloka індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0001-5825-0684:2025",
+  "template": "year",
+  "query": "Скільки публікацій Liudmyla Doloka вийшло у 2025 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2025
+  }
+ },
+ {
+  "id": "oa:0000-0001-5825-0684",
+  "template": "open_access",
+  "query": "Скільки публікацій Liudmyla Doloka у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0002-4370-3086",
+  "template": "total",
+  "query": "Скільки всього публікацій має Svitlana Ustychenko?",
+  "oracle": {
+   "kind": "number",
+   "value": 4
+  }
+ },
+ {
+  "id": "scopus:0000-0002-4370-3086",
+  "template": "scopus",
+  "query": "Скільки публікацій Svitlana Ustychenko індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0002-4370-3086:2025",
+  "template": "year",
+  "query": "Скільки публікацій Svitlana Ustychenko вийшло у 2025 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2025
+  }
+ },
+ {
+  "id": "oa:0000-0002-4370-3086",
+  "template": "open_access",
+  "query": "Скільки публікацій Svitlana Ustychenko у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 4
+  }
+ },
+ {
+  "id": "total:0000-0001-6825-5083",
+  "template": "total",
+  "query": "Скільки всього публікацій має Сергій Полях?",
+  "oracle": {
+   "kind": "number",
+   "value": 9
+  }
+ },
+ {
+  "id": "scopus:0000-0001-6825-5083",
+  "template": "scopus",
+  "query": "Скільки публікацій Сергій Полях індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0001-6825-5083:2020",
+  "template": "year",
+  "query": "Скільки публікацій Сергій Полях вийшло у 2020 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 2,
+   "year": 2020
+  }
+ },
+ {
+  "id": "oa:0000-0001-6825-5083",
+  "template": "open_access",
+  "query": "Скільки публікацій Сергій Полях у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0003-1487-1950",
+  "template": "total",
+  "query": "Скільки всього публікацій має Nataliia Khliebnikova?",
+  "oracle": {
+   "kind": "number",
+   "value": 36
+  }
+ },
+ {
+  "id": "scopus:0000-0003-1487-1950",
+  "template": "scopus",
+  "query": "Скільки публікацій Nataliia Khliebnikova індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0003-1487-1950:2013",
+  "template": "year",
+  "query": "Скільки публікацій Nataliia Khliebnikova вийшло у 2013 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2013
+  }
+ },
+ {
+  "id": "oa:0000-0003-1487-1950",
+  "template": "open_access",
+  "query": "Скільки публікацій Nataliia Khliebnikova у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "total:0000-0003-3642-2849",
+  "template": "total",
+  "query": "Скільки всього публікацій має Sergiy Burmistrov?",
+  "oracle": {
+   "kind": "number",
+   "value": 2
+  }
+ },
+ {
+  "id": "scopus:0000-0003-3642-2849",
+  "template": "scopus",
+  "query": "Скільки публікацій Sergiy Burmistrov індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 0
+  }
+ },
+ {
+  "id": "year:0000-0003-3642-2849:2023",
+  "template": "year",
+  "query": "Скільки публікацій Sergiy Burmistrov вийшло у 2023 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 1,
+   "year": 2023
+  }
+ },
+ {
+  "id": "oa:0000-0003-3642-2849",
+  "template": "open_access",
+  "query": "Скільки публікацій Sergiy Burmistrov у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 2
+  }
+ },
+ {
+  "id": "total:0000-0003-0242-2234",
+  "template": "total",
+  "query": "Скільки всього публікацій має Serhii Zabolotnii?",
+  "oracle": {
+   "kind": "number",
+   "value": 73
+  }
+ },
+ {
+  "id": "scopus:0000-0003-0242-2234",
+  "template": "scopus",
+  "query": "Скільки публікацій Serhii Zabolotnii індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 19
+  }
+ },
+ {
+  "id": "year:0000-0003-0242-2234:2018",
+  "template": "year",
+  "query": "Скільки публікацій Serhii Zabolotnii вийшло у 2018 році?",
+  "oracle": {
+   "kind": "number",
+   "value": 10,
+   "year": 2018
+  }
+ },
+ {
+  "id": "oa:0000-0003-0242-2234",
+  "template": "open_access",
+  "query": "Скільки публікацій Serhii Zabolotnii у відкритому доступі?",
+  "oracle": {
+   "kind": "number",
+   "value": 11
+  }
+ },
+ {
+  "id": "agg:faculty",
+  "template": "agg",
+  "query": "Скільки науково-педагогічних працівників є в базі закладу?",
+  "oracle": {
+   "kind": "number",
+   "value": 35
+  }
+ },
+ {
+  "id": "agg:pubs",
+  "template": "agg",
+  "query": "Скільки всього публікацій у закладі за всі роки?",
+  "oracle": {
+   "kind": "number",
+   "value": 1008
+  }
+ },
+ {
+  "id": "agg:scopus",
+  "template": "agg",
+  "query": "Скільки всього публікацій закладу індексовано в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 27
+  }
+ },
+ {
+  "id": "agg:wos",
+  "template": "agg",
+  "query": "Скільки всього публікацій закладу індексовано у Web of Science?",
+  "oracle": {
+   "kind": "number",
+   "value": 22
+  }
+ },
+ {
+  "id": "agg:zero",
+  "template": "agg",
+  "query": "Скільки працівників не мають жодної публікації?",
+  "oracle": {
+   "kind": "number",
+   "value": 9
+  }
+ },
+ {
+  "id": "agg:withScopus",
+  "template": "agg",
+  "query": "Скільки працівників мають хоча б одну публікацію в Scopus?",
+  "oracle": {
+   "kind": "number",
+   "value": 6
+  }
+ },
+ {
+  "id": "agg:topPubs",
+  "template": "agg",
+  "query": "Хто з працівників має найбільше публікацій?",
+  "oracle": {
+   "kind": "name",
+   "value": "Iryna Mihus"
+  }
+ },
+ {
+  "id": "agg:topH",
+  "template": "agg",
+  "query": "Хто з працівників має найвищий h-індекс?",
+  "oracle": {
+   "kind": "name",
+   "value": "Nadiya Azmuk"
+  }
+ }
+]
