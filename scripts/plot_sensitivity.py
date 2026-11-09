@@ -43,34 +43,39 @@ fig, (axL, axR) = plt.subplots(1, 2, figsize=(10.4, 3.8))
 sw = S["s1_thetaMatchSweep"]
 x = [r["thetaMatch"] for r in sw]
 axL.errorbar(x, [r["precision"] for r in sw], yerr=[r["precision_ci"] for r in sw],
-             marker="o", capsize=3, label="Точність (Precision)", color="#2ca02c")
+             marker="o", capsize=3, label="Точність", color="#2ca02c")
 axL.errorbar(x, [r["recall"] for r in sw], yerr=[r["recall_ci"] for r in sw],
-             marker="v", capsize=3, label="Повнота (Recall)", color="#d62728")
+             marker="v", capsize=3, label="Повнота", color="#d62728")
 axL.errorbar(x, [r["f1"] for r in sw], yerr=[r["f1_ci"] for r in sw],
              marker="s", capsize=3, label="F1", color="#1f77b4")
 axL.axvline(theta_default, color="grey", ls="--", lw=1.2)
-axL.annotate(f"θ_match = {theta_default}", xy=(theta_default, 5), xytext=(-6, 0),
+axL.annotate(f"$\\theta_{{\\mathrm{{зл}}}}$ = {str(theta_default).replace('.', ',')}", xy=(theta_default, 5), xytext=(-6, 0),
              textcoords="offset points", rotation=90, va="bottom", ha="right",
              fontsize=9, color="dimgrey")
-axL.set_xlabel("Поріг автоматичного злиття θ_match")
+axL.set_xlabel("Поріг автоматичного злиття $\\theta_{\\mathrm{зл}}$")
 axL.set_ylabel("Метрика, %")
 axL.set_ylim(0, 105)
-axL.set_title("Якість дедуплікації залежно від θ_match")
+axL.set_title("Якість дедуплікації залежно від $\\theta_{\\mathrm{зл}}$")
 axL.legend(fontsize=9, loc="upper left", framealpha=0.9)
+
+from matplotlib.ticker import FuncFormatter  # noqa: E402
+_comma = FuncFormatter(lambda v, _p: f"{v:g}".replace(".", ","))
+axL.xaxis.set_major_formatter(_comma)
 
 # --- right: HITL load vs theta_review ---
 rw = S["s2_thetaReviewSweep"]
 rx = [r["thetaReview"] for r in rw]
 axR.plot(rx, [r["reviewPairsPerResearcher"] for r in rw],
-         marker="o", color="#9467bd", label="Пари у смузі HITL")
+         marker="o", color="#9467bd", label="Пари у смузі ручної перевірки")
 axR.axvline(review_default, color="grey", ls="--", lw=1.2)
-axR.annotate(f"θ_review = {review_default}", xy=(review_default, max(r["reviewPairsPerResearcher"] for r in rw) * 0.05),
+axR.annotate(f"$\\theta_{{\\mathrm{{пер}}}}$ = {str(review_default).replace('.', ',')}", xy=(review_default, max(r["reviewPairsPerResearcher"] for r in rw) * 0.05),
              xytext=(-6, 0), textcoords="offset points", rotation=90, va="bottom", ha="right",
              fontsize=9, color="dimgrey")
-axR.set_xlabel("Поріг ручної перевірки θ_review (за θ_match = %.2f)" % theta_default)
+axR.set_xlabel("Поріг ручної перевірки $\\theta_{\\mathrm{пер}}$ (за $\\theta_{\\mathrm{зл}}$ = %s)" % ("%.2f" % theta_default).replace(".", ","))
 axR.set_ylabel("Пар на дослідника")
 axR.set_title("Навантаження смуги ручної перевірки")
 axR.legend(fontsize=9)
+axR.xaxis.set_major_formatter(FuncFormatter(lambda v, _p: f"{v:.2f}".replace(".", ",")))
 
 fig.tight_layout()
 for ext in ("pdf", "png"):

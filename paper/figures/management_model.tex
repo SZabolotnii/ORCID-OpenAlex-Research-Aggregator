@@ -1,0 +1,66 @@
+% Standalone figure: the proactive research-management model (ITLT round 2, reviewer 1:
+% "не визначено структурних і функціональних компонент моделі управління, суб'єктів,
+% управлінських процедур, механізмів прийняття рішень і зворотного зв'язку").
+% Build: xelatex management_model.tex → management_model.pdf  (PNG: pdftoppm -r 200 -png)
+\documentclass[border=6pt]{standalone}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+\setmainlanguage{ukrainian}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\begin{document}
+\begin{tikzpicture}[
+  font=\small,
+  proc/.style={draw, rounded corners, align=center, inner sep=4pt, text width=2.85cm, minimum height=2.6cm, font=\footnotesize, execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000\centering}},
+  done/.style={proc, fill=green!12},
+  impl/.style={proc, fill=yellow!18},
+  plan/.style={proc, fill=white, dashed},
+  ar/.style={-{Stealth[length=2.4mm]}, thick},
+  fb/.style={-{Stealth[length=2.4mm]}, thick, dashed},
+  lbl/.style={font=\scriptsize, inner sep=2pt, fill=white, align=center}
+]
+% --- goal / target component ---
+\node[draw, rounded corners, fill=blue!8, align=center, inner sep=5pt, minimum width=16.4cm] (goal)
+  {\textbf{Мета:} виявити відхилення результативності підрозділів від цільових показників \emph{упродовж} звітного періоду\\[1pt]
+   \footnotesize \textbf{Цільовий компонент} — цільові показники та їх значення; \emph{суб'єкт:} керівництво ЗВО (проректор з наукової роботи)};
+
+% --- management cycle P1..P5 ---
+\node[done, below=12mm of goal.south west, anchor=north west] (p1)
+  {\textbf{П1. Збирання й консолідація}\\[2pt]\scriptsize інформаційний компонент\\[2pt]\emph{система; науковий відділ}};
+\node[impl, right=5mm of p1] (p2)
+  {\textbf{П2. Перевірка невизначених зіставлень}\\[2pt]\scriptsize контрольний компонент\\[2pt]\emph{науковий відділ; НПП}};
+\node[impl, right=5mm of p2] (p3)
+  {\textbf{П3. Моніторинг відхилень}\\[2pt]\scriptsize аналітичний і комунікаційний компоненти\\[2pt]\emph{завідувачі кафедр, декани}};
+\node[plan, right=5mm of p3] (p4)
+  {\textbf{П4. Коригувальні рішення}\\[2pt]\scriptsize рішення ухвалює людина; ШІ — дорадча роль\\[2pt]\emph{керівники підрозділів, проректор}};
+\node[plan, right=5mm of p4] (p5)
+  {\textbf{П5. Оцінювання наслідків}\\[2pt]\scriptsize результат заходів у наступному циклі\\[2pt]\emph{проректор, завідувачі}};
+
+\draw[ar] (p1) -- (p2);
+\draw[ar] (p2) -- (p3);
+\draw[ar] (p3) -- (p4);
+\draw[ar] (p4) -- (p5);
+\draw[ar] (goal.south -| p3) -- node[lbl, right] {цільові значення} (p3.north);
+
+% --- feedback loops ---
+\draw[fb] (p2.south) -- ++(0,-7mm) coordinate (q) -- node[lbl, below=1pt] {контур якості даних:\\рішення експерта, оскарження НПП} (q -| p1.south) -- (p1.south);
+\draw[fb] (p5.north) -- node[lbl, right, pos=0.5] {управлінський контур:\\перегляд цілей} (goal.south -| p5);
+\draw[fb] (p5.south) -- ++(0,-12mm) coordinate (r) -- node[lbl, below=1pt] {управлінський контур: наступний цикл моніторингу} (r -| p3.south) -- (p3.south);
+
+% --- ICT means band ---
+\node[draw, rounded corners, fill=gray!8, align=center, inner sep=5pt, minimum width=16.4cm,
+      below=17mm of p3.south] (ict)
+  {\textbf{Засоби ІКТ (ResearchIQ):} конвеєр «золотого запису» (П1) \;|\; смуга ручної перевірки та журнал походження даних (П2)\\
+   \footnotesize панель показників і порівняння кафедр (П3) \;|\; агентний шар: генеративний ШІ з типізованими інструментами (П3--П4)};
+
+% --- legend ---
+\node[below=3mm of ict.south west, anchor=north west, font=\scriptsize, align=left] (leg) {%
+  \tikz\node[draw, rounded corners, fill=green!12, minimum width=6mm, minimum height=3mm]{}; реалізовано й кількісно оцінено \quad
+  \tikz\node[draw, rounded corners, fill=yellow!18, minimum width=6mm, minimum height=3mm]{}; реалізовано повністю або частково, без кількісного оцінювання \quad
+  \tikz\node[draw, dashed, rounded corners, minimum width=6mm, minimum height=3mm]{}; проєктне рішення \quad
+  \tikz\draw[fb] (0,0) -- (7mm,0); зворотний зв'язок};
+\end{tikzpicture}
+\end{document}

@@ -29,7 +29,7 @@
 
 % --- Level 2: reactive vs proactive ---
 \node[half, below=14mm of l1.south, xshift=-3.7cm, fill=red!7] (react) {\textbf{Реактивна модель}\\[1pt]
-  \footnotesize звітність \emph{post factum} наприкінці\\ \footnotesize звітного періоду};
+  \footnotesize звітність постфактум, наприкінці\\ \footnotesize звітного періоду};
 \node[half, below=14mm of l1.south, xshift=3.7cm, fill=green!10] (proact) {\textbf{Проактивне управління}\\[1pt]
   \footnotesize наукометричні дані як безперервний\\ \footnotesize керований потік, актуальний будь-коли};
 
@@ -42,11 +42,11 @@
   \footnotesize організаційна форма функції: облік публікацій, проєктів, авторів \;|\; стандарт CERIF, ініціативи OpenAIRE/EOSC};
 
 % --- Level 4: data trustworthiness ---
-\node[band, below=9mm of rim, fill=gray!10] (er) {\textbf{Розв'язання сутностей (Entity Resolution) $\Rightarrow$ «Золотий запис» (Golden Record)}\\[1pt]
-  \footnotesize канонізація, блокування, парне зіставлення, кластеризація, провенанс \;|\; смуга ручної перевірки (HITL)};
+\node[band, below=9mm of rim, fill=gray!10] (er) {\textbf{Розв'язання сутностей $\Rightarrow$ «золотий запис»}\\[1pt]
+  \footnotesize канонізація, блокування, парне зіставлення, кластеризація, походження даних \;|\; смуга ручної перевірки};
 
 % --- Level 5: agent layer ---
-\node[band, below=9mm of er, fill=orange!10] (agent) {\textbf{Агентний шар: генеративний ШІ + автономний агент (MCP)}\\[1pt]
+\node[band, below=9mm of er, fill=orange!10] (agent) {\textbf{Агентний шар: генеративний ШІ + автономний агент (протокол MCP)}\\[1pt]
   \footnotesize природномовний інтерфейс керівника до перевірених даних; викликає типізовані інструменти,\\
   \footnotesize \textbf{не ухвалює критичних рішень} щодо тотожності публікацій};
 
@@ -60,8 +60,8 @@
 % --- TRACE bracket on the right ---
 \draw[decorate, decoration={brace, amplitude=5pt}, thick, gray!70]
   ([xshift=4mm]agent.south east) -- ([xshift=4mm]er.north east)
-  node[midway, right=4mm, align=left, font=\footnotesize, text=black, text width=3.4cm]
-  {\textbf{Рамка TRACE}\\ розподіляє ці компоненти по шарах: L1 --- детерміноване ядро, L2a --- класичний ML, L2b --- LLM-валідатор, L3/L4 --- ескалація й нагляд людини};
+  node[midway, right=4mm, align=left, font=\footnotesize, text=black, text width=4.0cm]
+  {\hyphenpenalty=10000\textbf{Рамка TRACE}\\ розподіляє ці компоненти по шарах:\\ L1 --- детерміноване ядро;\\ L2a --- класичне машинне навчання;\\ L2b --- мовна модель як валідатор;\\ L3/L4 --- ескалація й нагляд людини};
 
 \end{tikzpicture}
 \end{document}

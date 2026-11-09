@@ -8,7 +8,7 @@
 \setmainfont{DejaVu Serif}
 \setsansfont{DejaVu Sans}
 \setmonofont{DejaVu Sans Mono}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,array}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning}
 \begin{document}
@@ -16,15 +16,15 @@
   font=\small,
   box/.style={draw, rounded corners, align=center, inner sep=5pt, minimum width=14cm}
 ]
-  \node[box, fill=blue!8] (l4) {\textbf{L4 --- Обмежений людський нагляд} \,(\emph{operator supervision})\\\footnotesize admin override \;|\; audit-log \;|\; перевизначення будь-якого рішення};
-  \node[box, below=4mm of l4, fill=orange!12] (l3) {\textbf{L3 --- Політика ескалації} \,(\emph{staged qualification})\\\footnotesize пороги $\theta_{\mathrm{match}}/\theta_{\mathrm{review}}$ \;|\; fail-fast на конфлікті DOI \;|\; HITL-тригери};
-  \node[box, below=4mm of l3, fill=green!8] (l2) {\textbf{L2 --- Інвентар навчених компонентів}\\[3pt]
+  \node[box, fill=blue!8] (l4) {\textbf{L4 --- Обмежений нагляд людини}\\\footnotesize перевизначення будь-якого автоматичного рішення адміністратором \;|\; журнал дій};
+  \node[box, below=4mm of l4, fill=orange!12] (l3) {\textbf{L3 --- Політика ескалації}\\\footnotesize пороги $\theta_{\text{зл}}$ і $\theta_{\text{пер}}$ \;|\; негайна відмова від злиття за конфлікту DOI \;|\; умови винесення на ручну перевірку};
+  \node[box, below=4mm of l3, fill=green!8] (l2) {\textbf{L2 --- Навчені компоненти}\\[3pt]
     \footnotesize
-    \begin{tabular}{@{}p{0.40\linewidth}@{\hspace{4mm}}p{0.40\linewidth}@{}}
-      \textbf{L2a --- класичний ML}\newline ER-скоринг: TF, Левенштейн, Жаккар; логіт $\sigma(\boldsymbol{\beta}\cdot\boldsymbol{\phi})$ &
-      \textbf{L2b --- LLM-валідатор}\newline NL-запити, пояснення, перевірка узгодженості \\
+    \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.46\linewidth}@{\hspace{5mm}}>{\raggedright\arraybackslash}p{0.46\linewidth}@{}}
+      \textbf{L2a --- класичне машинне навчання}\newline оцінка зіставлення: близькість назв, відстань Левенштейна, коефіцієнт Жаккара; логістична функція $\sigma(\boldsymbol{\beta}\cdot\boldsymbol{\phi})$ &
+      \textbf{L2b --- мовна модель як валідатор}\newline тлумачення природномовних запитів, пояснення, перевірка узгодженості \\
     \end{tabular}};
-  \node[box, below=4mm of l2, fill=gray!12] (l1) {\textbf{L1 --- Детерміноване ядро} \,(\emph{trust anchor}, non-generative)\\\footnotesize канонізація DOI \;|\; жорсткі обмеження (охоронець конфлікту DOI) \;|\; провенанс (W3C~PROV)};
+  \node[box, below=4mm of l2, fill=gray!12] (l1) {\textbf{L1 --- Детерміноване ядро} \,(якір довіри, без генерування)\\\footnotesize канонізація DOI \;|\; жорсткі обмеження (охоронець конфлікту DOI) \;|\; фіксація походження даних (W3C~PROV)};
 
   \draw[-{Stealth[length=2.6mm]}, thick] (l1.north) -- (l2.south);
   \draw[-{Stealth[length=2.6mm]}, thick] (l2.north) -- (l3.south);

@@ -23,18 +23,18 @@
   % Left column: React SPA on top, the manager/admin (block 1) stacked below it
   % (block 2). Stacking narrows the whole figure so the boxes — and their text —
   % render larger when the figure is fit to the text width.
-  \node[wide, fill=cyan!8] (spa) {\textbf{React SPA}\\\footnotesize dashboard, НПП, ORCID search\\chat, reports};
+  \node[wide, fill=cyan!8] (spa) {\textbf{Вебінтерфейс}\\\footnotesize панель показників, список НПП,\\\footnotesize пошук в ORCID, діалог, звіти};
   \node[wide, below=of spa, fill=blue!8] (user) {\textbf{Керівник / адміністратор}\\\footnotesize запити, контроль, експорт};
-  \node[wide, right=of spa, fill=orange!10] (api) {\textbf{Node.js / Express API}\\\footnotesize auth, tenant routing\\data and report endpoints};
+  \node[wide, right=of spa, fill=orange!10] (api) {\textbf{Серверний програмний інтерфейс}\\\footnotesize автентифікація, розмежування закладів,\\\footnotesize видача даних і звітів};
 
   % API sits at the top-left of the server cluster so the SPA→API arrow enters
   % the container at its boundary instead of crossing the box border.
-  \node[smallbox, below=9mm of api, fill=gray!10] (tenant) {\textbf{Tenant storage}\\\footnotesize окремі JSON-набори\\для кожного ЗВО};
-  \node[smallbox, right=of tenant, fill=green!10] (er) {\textbf{Golden Record}\\\footnotesize нормалізація, ER\\провенанс, HITL};
-  \node[smallbox, right=of er, fill=purple!10] (agent) {\textbf{\texttt{pi-agent-core}}\\\footnotesize tool calling\\пояснення і звіти};
+  \node[smallbox, below=9mm of api, fill=gray!10] (tenant) {\textbf{Сховище даних}\\\footnotesize окремий набір даних\\\footnotesize для кожного ЗВО};
+  \node[smallbox, right=of tenant, fill=green!10] (er) {\textbf{«Золотий запис»}\\\footnotesize канонізація, зведення записів,\\\footnotesize походження даних, ручна перевірка};
+  \node[smallbox, right=of er, fill=purple!10] (agent) {\textbf{Агентний шар}\\\footnotesize виклик типізованих інструментів,\\\footnotesize пояснення і звіти};
 
-  \node[smallbox, below=9mm of er, fill=yellow!12] (sources) {\textbf{ORCID / OpenAlex / Scopus}\\\footnotesize профілі, праці, метрики};
-  \node[smallbox, below=9mm of agent, fill=red!8] (llm) {\textbf{Gemini / OpenRouter}\\\footnotesize інтерпретація запиту\\без критичних рішень};
+  \node[smallbox, below=9mm of er, fill=yellow!12] (sources) {\textbf{ORCID / OpenAlex / Scopus}\\\footnotesize профілі, праці, показники};
+  \node[smallbox, below=9mm of agent, fill=red!8] (llm) {\textbf{Мовна модель}\\\footnotesize тлумачення запиту,\\\footnotesize без критичних рішень};
 
   \draw[arrow] (user) -- (spa);
   \draw[arrow] (spa) -- (api);

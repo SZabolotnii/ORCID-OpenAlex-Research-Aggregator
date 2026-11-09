@@ -34,34 +34,34 @@
 
 % --- steps 1-3 ---
 \node[stepbox, below=7mm of sources] (s1) {\textbf{Крок 1. Канонізація сигнатури}\\[1pt]
-  \footnotesize DOI $\to$ нижній регістр, зняття префіксів, валідація \;|\; назва: NFKC + casefold\\
+  \footnotesize DOI $\to$ нижній регістр, зняття префіксів, валідація \;|\; назва: нормалізація NFKC, зведення регістру\\
   \footnotesize \textbf{зі збереженням кирилиці} \;|\; автори: транслітерація кирилиця\,$\to$\,латиниця};
 
 \node[stepbox, below=of s1] (s2) {\textbf{Крок 2. Блокування} \,\footnotesize(уникнення $O(n^2)$ порівнянь)\\[1pt]
-  \footnotesize блоки: точний DOI \;|\; два найдовші токени назви \;|\; «рік + токен»};
+  \footnotesize блоки: точний DOI \;|\; два найдовші слова назви \;|\; «рік + слово назви»};
 
 \node[stepbox, below=of s2] (s3) {\textbf{Крок 3. Парне логістичне зіставлення}\\[2pt]
-  $\mathrm{score}=\sigma(\boldsymbol{\beta}\cdot\boldsymbol{\phi})$\\[1pt]
-  \footnotesize ознаки $\boldsymbol{\phi}$: збіг/конфлікт DOI, косинус назв, Левенштейн, рік, журнал, автори, URL};
+  $s=\sigma(\boldsymbol{\beta}\cdot\boldsymbol{\phi})$\\[1pt]
+  \footnotesize ознаки $\boldsymbol{\phi}$: збіг/конфлікт DOI, близькість назв, відстань Левенштейна, рік, журнал, автори, вебадреса};
 
 % --- decision ---
-\node[dec, below=8mm of s3] (d) {порівняння score};
+\node[dec, below=8mm of s3] (d) {порівняння оцінки $s$};
 
 % --- branches ---
 \node[side, below=16mm of d, xshift=-4.9cm, fill=red!8] (drop) {\textbf{Відкинути}\\[1pt] різні праці};
-\node[side, below=16mm of d, xshift=4.9cm, fill=orange!12] (hitl) {\textbf{Смуга HITL}\\[1pt] ручна перевірка експертом};
+\node[side, below=16mm of d, xshift=4.9cm, fill=orange!12] (hitl) {\textbf{Смуга ручної перевірки}\\[1pt] рішення ухвалює експерт};
 
 % --- steps 4-5 ---
 \node[stepbox, below=46mm of d] (s4) {\textbf{Крок 4. Кластеризація з охоронцем конфлікту DOI}\\[1pt]
-  \footnotesize зв'язні компоненти за ребрами $\mathrm{score}\ge\theta_{\mathrm{match}}$;\\
+  \footnotesize зв'язні компоненти за ребрами $s\ge\theta_{\text{зл}}$;\\
   \footnotesize два кластери з непорожніми неперетинними наборами DOI \textbf{не зливаються}};
 
-\node[stepbox, below=of s4] (s5) {\textbf{Крок 5. Злиття атрибутів і провенанс}\\[1pt]
-  \footnotesize голосування, зважене за надійністю джерела (Scopus/WoS $\succ$ OpenAlex $\succ$ ORCID)\\
-  \footnotesize пріоритет полів: DOI $\succ$ Crossref $\succ$ CRIS $\succ$ OpenAlex $\succ$ ORCID \;|\; провенанс W3C~PROV};
+\node[stepbox, below=of s4] (s5) {\textbf{Крок 5. Злиття атрибутів і фіксація походження даних}\\[1pt]
+  \footnotesize голосування, зважене за надійністю джерела (Scopus, Web of Science $\succ$ OpenAlex $\succ$ ORCID)\\
+  \footnotesize пріоритет полів: DOI $\succ$ Crossref $\succ$ CRIS $\succ$ OpenAlex $\succ$ ORCID \;|\; походження даних за W3C~PROV};
 
-\node[outbox, below=of s5] (gold) {\textbf{«Золотий запис» (Golden Record)}\\[1pt]
-  \footnotesize канонічна праця з простежуваністю кожного поля та значенням matchScore};
+\node[outbox, below=of s5] (gold) {\textbf{«Золотий запис»}\\[1pt]
+  \footnotesize канонічна праця з простежуваним джерелом кожного поля та оцінкою зіставлення};
 
 % --- arrows ---
 \draw[ar] (sources.south) -- (s1.north);
@@ -70,11 +70,11 @@
 \draw[ar] (s3) -- (d);
 
 % left branch: reject
-\draw[ar] (d.west) -- ++(-2.2,0) node[lbl, above, pos=0.55] {$\mathrm{score}<\theta_{\mathrm{review}}=0{,}70$} -| (drop.north);
-% right branch: HITL band
-\draw[ar] (d.east) -- ++(2.2,0) node[lbl, above, pos=0.55] {$\mathrm{score}\in[0{,}70;\,0{,}90)$} -| (hitl.north);
+\draw[ar] (d.west) -- ++(-2.2,0) node[lbl, above, pos=0.55] {$s<\theta_{\text{пер}}=0{,}70$} -| (drop.north);
+% right branch: manual review band
+\draw[ar] (d.east) -- ++(2.2,0) node[lbl, above, pos=0.55] {$s\in[0{,}70;\,0{,}90)$} -| (hitl.north);
 % centre: auto-merge
-\draw[ar] (d.south) -- node[lbl, pos=0.22, align=center] {$\mathrm{score}\ge\theta_{\mathrm{match}}=0{,}90$\\[-1pt]\footnotesize автоматичне злиття} (s4.north);
+\draw[ar] (d.south) -- node[lbl, pos=0.3, align=center] {$s\ge\theta_{\text{зл}}=0{,}90$:\\автоматичне злиття} (s4.north);
 % resolved HITL decisions re-enter clustering
 \draw[ar, dashed] (hitl.south) |- ([yshift=8mm]s4.north east) -- ([xshift=-8mm]s4.north east);
 \node[lbl, anchor=east, font=\scriptsize\itshape] at ([xshift=-10mm, yshift=11mm]s4.north east) {рішення експерта};

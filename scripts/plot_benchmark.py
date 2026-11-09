@@ -45,11 +45,11 @@ fig, ax = plt.subplots(figsize=(5.2, 3.6))
 ax.errorbar(x, [d["f1"] for d in dup], yerr=[d["f1_ci"] for d in dup],
             marker="o", capsize=3, label="Парна F1", color="#1f77b4")
 ax.errorbar(x, [d["b3f1"] for d in dup], yerr=[d["b3f1_ci"] for d in dup],
-            marker="s", capsize=3, label="B³ F1", color="#ff7f0e")
-ax.axvspan(15, 25, color="grey", alpha=0.12, label="Заявлений діапазон (15–25%)")
+            marker="s", capsize=3, label="Кластерна F1 (B³)", color="#ff7f0e")
+ax.axvspan(15, 25, color="grey", alpha=0.12, label="Типовий діапазон (15–25 %)")
 ax.set_xlabel("Частка дублікатів, %")
 ax.set_ylabel("Якість дедуплікації, %")
-ax.set_title("Чутливість до рівня дублювання (Golden Record)")
+ax.set_title("Чутливість «золотого запису» до частки дублікатів")
 ax.legend(fontsize=9)
 save(fig, "f1_dup_sensitivity")
 
@@ -58,19 +58,21 @@ corr = S["f2_corruptionSweep"]
 cx = [c["corruption"] for c in corr]
 fig, ax = plt.subplots(figsize=(5.2, 3.6))
 ax.errorbar(cx, [c["precision"] for c in corr], yerr=[c["precision_ci"] for c in corr],
-            marker="o", capsize=3, label="Точність (Precision)", color="#2ca02c")
+            marker="o", capsize=3, label="Точність", color="#2ca02c")
 ax.errorbar(cx, [c["recall"] for c in corr], yerr=[c["recall_ci"] for c in corr],
-            marker="v", capsize=3, label="Повнота (Recall)", color="#d62728")
+            marker="v", capsize=3, label="Повнота", color="#d62728")
 ax.axvline(1.0, color="grey", ls="--", lw=1, alpha=0.6)
 ax.set_xlabel("Множник спотворення метаданих")
+from matplotlib.ticker import FuncFormatter  # noqa: E402
+ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _p: f"{v:g}".replace(".", ",")))
 ax.set_ylabel("Метрика, %")
-ax.set_title("Чутливість до спотворення метаданих (Golden Record)")
+ax.set_title("Чутливість «золотого запису» до спотворення метаданих")
 ax.legend(fontsize=9)
 save(fig, "f2_corruption_sensitivity")
 
 # --- F3: method comparison (grouped bars P / R / F1) ---
 t1 = S["t1_dedupQuality"]
-labels = S["methodLabels"]
+labels = {"doi": "Лише DOI", "titleyear": "Назва + рік", "fuzzy": "Нечіткий", "golden": "«Золотий запис»"}
 order = ["doi", "titleyear", "golden"]
 methods = [labels[m] for m in order]
 metrics = [("precision", "Точність"), ("recall", "Повнота"), ("f1", "F1")]
